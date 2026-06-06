@@ -1,0 +1,6 @@
+{
+  "name": "@hsbx/tsconfig",
+  "version": "3.0.0",
+  "private": true,
+  "main": "base.json"
+}

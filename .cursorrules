@@ -1,0 +1,22 @@
+You are building Hai San Bien Xanh, a seafood ecommerce platform.
+
+Tech stack:
+- Monorepo with Turborepo
+- Web: Next.js + TailwindCSS
+- Mobile: Expo React Native
+- API: NestJS
+- Database: PostgreSQL + Prisma
+- Validation: Zod
+- Shared packages for UI, types, utils
+
+Rules:
+- Keep code modular by feature.
+- Do not put business logic directly inside UI components.
+- Use shared types from packages/shared.
+- Use Zod schemas from packages/validation.
+- Use Prisma only from packages/db or API service layer.
+- Use Vietnamese text for customer-facing UI.
+- UI style must match Hai Sản Biển Xanh: blue, white, fresh seafood, clean ecommerce layout.
+- Price format must be Vietnamese currency, example: 370.000đ.
+- Order statuses: new, confirmed, preparing, delivering, completed, cancelled.
+- Product units: kg, con, combo, hop.

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e7490"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="32" fill="url(#bg)"/>
+  <g transform="translate(40, 35)">
+    <path d="M0 70c10-15 25-25 50-25s25 10 25 10 10-10 25-10 40 15 60 30" stroke="white" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M0 100c10-15 25-25 50-25s25 10 25 10 10-10 25-10 40 15 60 30" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.4"/>
+    <path d="M80 30l-8 20h16l-8-20z" fill="white"/>
+  </g>
+  <text x="100" y="148" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="800" fill="white" letter-spacing="1">BIỂN XANH</text>
+</svg>

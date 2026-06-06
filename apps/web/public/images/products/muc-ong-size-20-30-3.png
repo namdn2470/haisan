@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7e22ce"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="shimmer" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0)" />
+      <stop offset="50%" stop-color="rgba(255,255,255,0.08)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="600" height="600" rx="24" fill="url(#bg)"/>
+  <rect x="0" y="0" width="600" height="600" rx="24" fill="url(#shimmer)"/>
+  <!-- Decorative circles -->
+  <circle cx="480" cy="120" r="180" fill="#c084fc" opacity="0.08"/>
+  <circle cx="100" cy="500" r="120" fill="#c084fc" opacity="0.06"/>
+  <circle cx="350" cy="450" r="200" fill="#c084fc" opacity="0.04"/>
+  <!-- Icon area -->
+  <g transform="translate(200, 140)">
+    <g fill="none" stroke="white" stroke-width="4" stroke-linecap="round"><ellipse cx="100" cy="50" rx="45" ry="35"/><path d="M65 75c-5 30-15 55-20 65m20-65c5 30 15 55 20 65m20-65c-5 30-15 55-20 65m20-65c5 30 15 55 20 65m20-65c-5 30-15 55-20 65"/><circle cx="85" cy="45" r="4" fill="white"/><circle cx="115" cy="45" r="4" fill="white"/></g>
+  </g>
+  <!-- Text -->
+  <text x="300" y="420" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="800" fill="white" filter="url(#shadow)">Mực Ống Size 20-30</text>
+  <text x="300" y="460" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="500" fill="rgba(255,255,255,0.75)">Mực tươi sống - 20-30 con/kg</text>
+  <!-- Badge -->
+  <rect x="220" y="490" width="160" height="32" rx="16" fill="white" opacity="0.15"/>
+  <text x="300" y="512" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="white" letter-spacing="1">TƯƠI SỐNG</text>
+</svg>

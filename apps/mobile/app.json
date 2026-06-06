@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Hải Sản Biển Xanh",
+    "slug": "hai-san-bien-xanh",
+    "version": "3.0.0",
+    "orientation": "portrait",
+    "scheme": "hsbx",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router"],
+    "splash": {
+      "backgroundColor": "#005bdc"
+    }
+  }
+}

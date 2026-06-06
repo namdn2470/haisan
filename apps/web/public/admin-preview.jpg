@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" rx="16" fill="#f8fafc"/>
+  <rect x="20" y="20" width="360" height="40" rx="8" fill="#0e7490"/>
+  <text x="40" y="47" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="white">Dashboard</text>
+  <rect x="20" y="80" width="110" height="70" rx="10" fill="#ecfdf5"/>
+  <rect x="145" y="80" width="110" height="70" rx="10" fill="#eff6ff"/>
+  <rect x="270" y="80" width="110" height="70" rx="10" fill="#fef3c7"/>
+  <text x="75" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="24" font-weight="800" fill="#059669">24</text>
+  <text x="75" y="138" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Đơn mới</text>
+  <text x="200" y="115" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#2563eb">12.5M</text>
+  <text x="200" y="138" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" fill="#64748b">Doanh thu</text>
+  <rect x="20" y="170" width="360" height="110" rx="10" fill="white" stroke="#e2e8f0"/>
+  <text x="40" y="195" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#1e293b">Đơn hàng gần đây</text>
+  <rect x="40" y="210" width="320" height="20" rx="4" fill="#f1f5f9"/>
+  <rect x="40" y="240" width="320" height="20" rx="4" fill="#f1f5f9"/>
+</svg>
