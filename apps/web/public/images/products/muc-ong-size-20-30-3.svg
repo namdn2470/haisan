@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf2f8"/>
+      <stop offset="100%" stop-color="#fbcfe8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)" rx="12"/>
+  <!-- Bạch tuộc - octopus -->
+  <g filter="url(#shadow)" transform="translate(110, 50)">
+    <!-- Head/mantle -->
+    <ellipse cx="90" cy="60" rx="55" ry="50" fill="#be185d"/>
+    <ellipse cx="88" cy="58" rx="50" ry="45" fill="#db2777"/>
+    <ellipse cx="85" cy="55" rx="42" ry="38" fill="#f472b6"/>
+    <!-- Eyes -->
+    <ellipse cx="65" cy="48" rx="12" ry="14" fill="white"/>
+    <ellipse cx="65" cy="48" rx="8" ry="10" fill="#1f2937"/>
+    <circle cx="63" cy="45" r="3" fill="white"/>
+    <ellipse cx="105" cy="48" rx="12" ry="14" fill="white"/>
+    <ellipse cx="105" cy="48" rx="8" ry="10" fill="#1f2937"/>
+    <circle cx="103" cy="45" r="3" fill="white"/>
+    <!-- Tentacles - curved -->
+    <path d="M55 95 Q35 130 30 170 Q25 210 40 235" stroke="#be185d" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <path d="M70 100 Q55 140 50 180 Q48 220 65 245" stroke="#db2777" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M90 105 Q85 150 80 190 Q78 230 95 250" stroke="#be185d" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M110 105 Q120 150 115 190 Q112 230 125 248" stroke="#db2777" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M125 100 Q145 140 150 180 Q155 220 140 245" stroke="#be185d" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M135 92 Q160 125 168 165 Q175 205 158 230" stroke="#db2777" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M140 85 Q170 115 182 155 Q192 195 172 218" stroke="#be185d" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M142 78 Q175 100 192 135 Q205 170 180 195" stroke="#db2777" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <!-- Suction cups on tentacles -->
+    <g fill="#9d174d" opacity="0.5">
+      <circle cx="35" cy="175" r="4"/>
+      <circle cx="32" cy="195" r="3.5"/>
+      <circle cx="38" cy="215" r="3"/>
+      <circle cx="58" cy="185" r="4"/>
+      <circle cx="56" cy="205" r="3.5"/>
+      <circle cx="62" cy="225" r="3"/>
+      <circle cx="82" cy="195" r="4"/>
+      <circle cx="80" cy="215" r="3.5"/>
+      <circle cx="115" cy="195" r="4"/>
+      <circle cx="118" cy="215" r="3.5"/>
+    </g>
+  </g>
+  <!-- Label -->
+  <rect x="20" y="250" width="110" height="40" rx="8" fill="#be185d"/>
+  <text x="75" y="277" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="white" text-anchor="middle">Bạch Tuộc</text>
+  <text x="340" y="277" font-family="Arial, sans-serif" font-size="12" fill="#831843" text-anchor="middle">Tươi</text>
+</svg>

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+  </defs>
+  <rect width="600" height="300" fill="url(#bg)" rx="12"/>
+  <!-- Star burst -->
+  <g transform="translate(480, 80)">
+    <polygon points="40,0 45,30 75,30 50,50 60,80 40,60 20,80 30,50 5,30 35,30" fill="#f59e0b"/>
+  </g>
+  <!-- Tôm, Cua, Cá icons -->
+  <g transform="translate(400, 150)">
+    <!-- Tôm icon -->
+    <circle cx="30" cy="20" r="25" fill="#f97316" opacity="0.8"/>
+    <text x="30" y="28" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">T</text>
+    <!-- Cua icon -->
+    <circle cx="80" cy="20" r="25" fill="#059669" opacity="0.8"/>
+    <text x="80" y="28" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">C</text>
+    <!-- Cá icon -->
+    <circle cx="130" cy="20" r="25" fill="#f43f5e" opacity="0.8"/>
+    <text x="130" y="28" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="white" text-anchor="middle">C</text>
+  </g>
+  <!-- Text -->
+  <text x="40" y="100" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#d97706">ƯU ĐÃI</text>
+  <text x="40" y="150" font-family="Arial, sans-serif" font-size="42" font-weight="bold" fill="#0f172a">HÔM NAY</text>
+  <text x="40" y="185" font-family="Arial, sans-serif" font-size="18" fill="#78350f">Giảm đến 30% cho đơn hàng đầu tiên</text>
+  <!-- CTA -->
+  <rect x="40" y="210" width="150" height="45" rx="22" fill="#d97706"/>
+  <text x="115" y="240" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="white" text-anchor="middle">Đặt Hàng Ngay</text>
+</svg>

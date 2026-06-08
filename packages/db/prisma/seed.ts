@@ -10,9 +10,39 @@ import {
   OrderSource,
   DeliveryStatus,
   DiscountType,
+  UserRole,
+  UserStatus,
 } from "@prisma/client";
+import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
+
+const realFoodImages = {
+  hero:
+    "https://images.pexels.com/photos/16737158/pexels-photo-16737158.jpeg?auto=compress&cs=tinysrgb&w=1600",
+  shrimp:
+    "https://images.pexels.com/photos/14480456/pexels-photo-14480456.jpeg?auto=compress&cs=tinysrgb&w=900",
+  shrimpCooked:
+    "https://images.pexels.com/photos/16737158/pexels-photo-16737158.jpeg?auto=compress&cs=tinysrgb&w=900",
+  crab:
+    "https://images.pexels.com/photos/15665165/pexels-photo-15665165.jpeg?auto=compress&cs=tinysrgb&w=900",
+  crabCooked:
+    "https://images.pexels.com/photos/16737158/pexels-photo-16737158.jpeg?auto=compress&cs=tinysrgb&w=900",
+  fish:
+    "https://images.pexels.com/photos/8250365/pexels-photo-8250365.jpeg?auto=compress&cs=tinysrgb&w=900",
+  fishMarket:
+    "https://images.pexels.com/photos/1321124/pexels-photo-1321124.jpeg?auto=compress&cs=tinysrgb&w=900",
+  squid:
+    "https://images.pexels.com/photos/3276125/pexels-photo-3276125.jpeg?auto=compress&cs=tinysrgb&w=900",
+  calamari:
+    "https://images.pexels.com/photos/30496793/pexels-photo-30496793.jpeg?auto=compress&cs=tinysrgb&w=900",
+  shellfish:
+    "https://images.pexels.com/photos/19671370/pexels-photo-19671370.jpeg?auto=compress&cs=tinysrgb&w=900",
+  seafoodPlatter:
+    "https://images.pexels.com/photos/18281684/pexels-photo-18281684.jpeg?auto=compress&cs=tinysrgb&w=900",
+  prepared:
+    "https://images.pexels.com/photos/19835566/pexels-photo-19835566.jpeg?auto=compress&cs=tinysrgb&w=900",
+};
 
 function slugify(text: string) {
   return text
@@ -113,6 +143,49 @@ const extraProductMeta: Record<string, { unit: ProductUnit; basePrice: number; o
   "Hải sản sơ chế": { unit: ProductUnit.HOP, basePrice: 145000, origin: "Tổng hợp", sizeLabel: "Đóng khay tiện nấu" },
 };
 
+const categoryProductFallbackImages: Record<string, string[]> = {
+  "Tôm": [
+    realFoodImages.shrimp,
+    realFoodImages.shrimpCooked,
+    realFoodImages.seafoodPlatter,
+  ],
+  "Cua - Ghẹ": [
+    realFoodImages.crab,
+    realFoodImages.crabCooked,
+    realFoodImages.seafoodPlatter,
+  ],
+  "Cá": [
+    realFoodImages.fish,
+    realFoodImages.fishMarket,
+    realFoodImages.seafoodPlatter,
+  ],
+  "Mực": [
+    realFoodImages.squid,
+    realFoodImages.calamari,
+    realFoodImages.prepared,
+  ],
+  "Ốc - Sò": [
+    realFoodImages.shellfish,
+    realFoodImages.seafoodPlatter,
+    realFoodImages.prepared,
+  ],
+  "Combo": [
+    realFoodImages.seafoodPlatter,
+    realFoodImages.hero,
+    realFoodImages.prepared,
+  ],
+  "Hải sản sơ chế": [
+    realFoodImages.prepared,
+    realFoodImages.calamari,
+    realFoodImages.shrimpCooked,
+  ],
+};
+
+function getFallbackImagesForCategory(categoryName: string, count = 2) {
+  const images = categoryProductFallbackImages[categoryName] || categoryProductFallbackImages["Tôm"];
+  return Array.from({ length: count }, (_, index) => images[index % images.length]);
+}
+
 function generateAdditionalProducts(): ProductSeedItem[] {
   const badges = [ProductBadge.MOI, ProductBadge.TUOI_NGON, ProductBadge.BAN_CHAY, ProductBadge.UU_DAI];
 
@@ -141,10 +214,7 @@ function generateAdditionalProducts(): ProductSeedItem[] {
         soldCount: 24 + index * 7,
         ratingAvg: Number((4.5 + (index % 5) * 0.08).toFixed(1)),
         ratingCount: 18 + index * 4,
-        images: [
-          `/images/products/${slug}-1.png`,
-          `/images/products/${slug}-2.png`,
-        ],
+        images: getFallbackImagesForCategory(categoryName, 2),
         variants: [
           {
             name: "Tiêu chuẩn",
@@ -172,7 +242,9 @@ async function main() {
   await seedProducts();
   await seedBanners();
   await seedPromotions();
+  await seedAdminProfile();
   await seedDemoOrders();
+  await seedCustomRoles();
 
   console.log("Seed completed.");
 }
@@ -182,43 +254,43 @@ async function seedCategories() {
     {
       name: "Tôm",
       description: "Các loại tôm tươi sống, tôm sú, tôm thẻ, tôm hùm.",
-      imageUrl: "/images/categories/tom.png",
+      imageUrl: realFoodImages.shrimp,
       sortOrder: 1,
     },
     {
       name: "Cua - Ghẹ",
       description: "Cua Cà Mau, ghẹ xanh, ghẹ sống tuyển chọn.",
-      imageUrl: "/images/categories/cua-ghe.png",
+      imageUrl: realFoodImages.crab,
       sortOrder: 2,
     },
     {
       name: "Cá",
       description: "Cá biển tươi, cá hồng, cá mú, cá thu.",
-      imageUrl: "/images/categories/ca.png",
+      imageUrl: realFoodImages.fish,
       sortOrder: 3,
     },
     {
       name: "Mực",
       description: "Mực ống, mực lá, mực trứng tươi ngon.",
-      imageUrl: "/images/categories/muc.png",
+      imageUrl: realFoodImages.squid,
       sortOrder: 4,
     },
     {
       name: "Ốc - Sò",
       description: "Ốc hương, sò điệp, ngao hoa, hàu tươi.",
-      imageUrl: "/images/categories/oc-so.png",
+      imageUrl: realFoodImages.shellfish,
       sortOrder: 5,
     },
     {
       name: "Combo",
       description: "Combo hải sản gia đình, combo tiệc cuối tuần.",
-      imageUrl: "/images/categories/combo.png",
+      imageUrl: realFoodImages.seafoodPlatter,
       sortOrder: 6,
     },
     {
       name: "Hải sản sơ chế",
       description: "Hải sản đã làm sạch, tiện lợi khi chế biến.",
-      imageUrl: "/images/categories/hai-san-so-che.png",
+      imageUrl: realFoodImages.prepared,
       sortOrder: 7,
     },
   ];
@@ -382,9 +454,9 @@ async function seedProducts() {
       ratingAvg: 4.8,
       ratingCount: 128,
       images: [
-        "/images/products/tom-su-size-l-1.png",
-        "/images/products/tom-su-size-l-2.png",
-        "/images/products/tom-su-size-l-3.png",
+        realFoodImages.shrimp,
+        realFoodImages.shrimpCooked,
+        realFoodImages.seafoodPlatter,
       ],
       variants: [
         {
@@ -429,9 +501,9 @@ async function seedProducts() {
       ratingAvg: 4.8,
       ratingCount: 98,
       images: [
-        "/images/products/ghe-xanh-size-3-1.png",
-        "/images/products/ghe-xanh-size-3-2.png",
-        "/images/products/ghe-xanh-size-3-3.png",
+        realFoodImages.crab,
+        realFoodImages.crabCooked,
+        realFoodImages.seafoodPlatter,
       ],
       variants: [
         {
@@ -498,8 +570,8 @@ async function seedProducts() {
       ratingAvg: 4.7,
       ratingCount: 76,
       images: [
-        "/images/products/muc-ong-size-20-30-1.png",
-        "/images/products/muc-ong-size-20-30-2.png",
+        realFoodImages.squid,
+        realFoodImages.calamari,
       ],
       variants: [
         {
@@ -533,8 +605,8 @@ async function seedProducts() {
       ratingAvg: 4.6,
       ratingCount: 54,
       images: [
-        "/images/products/oc-huong-size-l-1.png",
-        "/images/products/oc-huong-size-l-2.png",
+        realFoodImages.shellfish,
+        realFoodImages.seafoodPlatter,
       ],
       variants: [
         {
@@ -568,8 +640,8 @@ async function seedProducts() {
       ratingAvg: 4.7,
       ratingCount: 41,
       images: [
-        "/images/products/ca-hong-bien-1.png",
-        "/images/products/ca-hong-bien-2.png",
+        realFoodImages.fish,
+        realFoodImages.fishMarket,
       ],
       variants: [
         {
@@ -603,8 +675,8 @@ async function seedProducts() {
       ratingAvg: 4.8,
       ratingCount: 33,
       images: [
-        "/images/products/combo-hai-san-gia-dinh-1.png",
-        "/images/products/combo-hai-san-gia-dinh-2.png",
+        realFoodImages.seafoodPlatter,
+        realFoodImages.hero,
       ],
       variants: [
         {
@@ -780,7 +852,7 @@ async function seedBanners() {
     {
       title: "Hải sản tươi sống",
       subtitle: "Giao nhanh trong ngày",
-      imageUrl: "/images/banners/home-hero.png",
+      imageUrl: realFoodImages.hero,
       linkUrl: "/products",
       position: BannerPosition.HOME_HERO,
       sortOrder: 1,
@@ -788,7 +860,7 @@ async function seedBanners() {
     {
       title: "Combo gia đình",
       subtitle: "Tiết kiệm đến 20%",
-      imageUrl: "/images/banners/combo-gia-dinh.png",
+      imageUrl: realFoodImages.seafoodPlatter,
       linkUrl: "/products?category=combo",
       position: BannerPosition.HOME_PROMO,
       sortOrder: 2,
@@ -796,7 +868,7 @@ async function seedBanners() {
     {
       title: "Hải sản sơ chế",
       subtitle: "Làm sạch sẵn - Tiện lợi",
-      imageUrl: "/images/banners/hai-san-so-che.png",
+      imageUrl: realFoodImages.prepared,
       linkUrl: "/products?category=hai-san-so-che",
       position: BannerPosition.HOME_PROMO,
       sortOrder: 3,
@@ -804,7 +876,7 @@ async function seedBanners() {
     {
       title: "Ưu đãi hôm nay",
       subtitle: "Giảm giá sốc mỗi ngày",
-      imageUrl: "/images/banners/uu-dai-hom-nay.png",
+      imageUrl: realFoodImages.crabCooked,
       linkUrl: "/promotions",
       position: BannerPosition.HOME_PROMO,
       sortOrder: 4,
@@ -812,7 +884,7 @@ async function seedBanners() {
     {
       title: "Mobile Hero",
       subtitle: "Đặt hải sản nhanh trong 2h",
-      imageUrl: "/images/banners/mobile-hero.png",
+      imageUrl: realFoodImages.hero,
       linkUrl: "/products",
       position: BannerPosition.MOBILE_HERO,
       sortOrder: 1,
@@ -916,6 +988,30 @@ async function seedPromotions() {
   }
 
   console.log("Seeded promotions.");
+}
+
+async function seedAdminProfile() {
+  const phone = "0901234567";
+  const passwordHash = await bcrypt.hash("Admin@123", 10);
+
+  await prisma.profile.upsert({
+    where: { phone },
+    update: {
+      fullName: "Quản trị Biển Xanh",
+      passwordHash,
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+    },
+    create: {
+      phone,
+      fullName: "Quản trị Biển Xanh",
+      passwordHash,
+      role: UserRole.ADMIN,
+      status: UserStatus.ACTIVE,
+    },
+  });
+
+  console.log("Seeded admin profile: 0901234567 / Admin@123");
 }
 
 async function seedDemoOrders() {
@@ -1080,6 +1176,93 @@ async function seedDemoOrders() {
   }
 
   console.log("Seeded demo orders.");
+}
+
+async function seedCustomRoles() {
+  const roles = [
+    {
+      name: "Admin",
+      slug: "ADMIN",
+      description: "Quyền quản trị hệ thống, có toàn quyền quản lý",
+      color: "#7c3aed",
+      isSystem: true,
+      permissions: [
+        "dashboard.view",
+        "orders.view", "orders.update", "orders.cancel",
+        "products.view", "products.create", "products.update", "products.delete",
+        "categories.view", "categories.create", "categories.update", "categories.delete",
+        "customers.view", "customers.update",
+        "promotions.view", "promotions.create", "promotions.update", "promotions.delete",
+        "posts.view", "posts.create", "posts.update", "posts.delete",
+        "banners.view", "banners.create", "banners.update", "banners.delete",
+        "reviews.view", "reviews.update",
+        "delivery.view", "delivery.update",
+        "inventory.view", "inventory.update",
+        "staff.view", "staff.create", "staff.update",
+        "reports.view",
+        "settings.view", "settings.update",
+      ],
+    },
+    {
+      name: "Quản lý",
+      slug: "MANAGER",
+      description: "Quản lý cao cấp, có quyền xem báo cáo và quản lý nhân viên",
+      color: "#15803d",
+      isSystem: true,
+      permissions: [
+        "dashboard.view",
+        "orders.view", "orders.update", "orders.cancel",
+        "products.view", "products.create", "products.update",
+        "categories.view", "categories.create", "categories.update",
+        "customers.view", "customers.update",
+        "promotions.view", "promotions.create", "promotions.update",
+        "posts.view", "posts.create", "posts.update",
+        "banners.view", "banners.create", "banners.update",
+        "reviews.view", "reviews.update",
+        "delivery.view", "delivery.update",
+        "inventory.view", "inventory.update",
+        "staff.view", "staff.create", "staff.update",
+        "reports.view",
+      ],
+    },
+    {
+      name: "Nhân viên",
+      slug: "STAFF",
+      description: "Nhân viên xử lý đơn hàng và quản lý sản phẩm",
+      color: "#1d4ed8",
+      isSystem: true,
+      permissions: [
+        "dashboard.view",
+        "orders.view", "orders.update",
+        "products.view", "products.create", "products.update",
+        "categories.view",
+        "customers.view",
+        "reviews.view",
+        "inventory.view",
+      ],
+    },
+    {
+      name: "Shipper",
+      slug: "SHIPPER",
+      description: "Nhân viên giao hàng, chỉ được phép cập nhật trạng thái giao hàng",
+      color: "#0891b2",
+      isSystem: true,
+      permissions: [
+        "orders.view",
+        "delivery.view", "delivery.update",
+      ],
+    },
+  ];
+
+  for (const role of roles) {
+    await prisma.customRole.upsert({
+      where: { slug: role.slug },
+      update: {},
+      create: role,
+    });
+  }
+
+  console.log("Seeded custom roles.");
 }
 
 main()

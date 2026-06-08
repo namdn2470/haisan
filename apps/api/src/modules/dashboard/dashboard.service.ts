@@ -32,7 +32,7 @@ export class DashboardService {
 
   async getRevenue() {
     const data = await this.prisma.$queryRaw`
-      SELECT DATE(created_at) as day, COUNT(*) as order_count, SUM(total_amount) as revenue
+      SELECT DATE(created_at) as day, COUNT(*)::int as order_count, SUM(total_amount) as revenue
       FROM orders
       WHERE order_status NOT IN ('CANCELLED', 'RETURNED')
         AND created_at >= NOW() - INTERVAL '30 days'

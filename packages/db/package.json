@@ -3,14 +3,19 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
+    "build": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "test:crud": "node scripts/test-crud.cjs",
+    "check:data": "node scripts/check-data.cjs",
+    "test:e2e:flows": "node scripts/test-e2e-flows.cjs"
   },
   "dependencies": {
     "@prisma/client": "^6.6.0",
+    "bcrypt": "^5.1.1",
     "prisma": "^6.6.0"
   },
   "devDependencies": {

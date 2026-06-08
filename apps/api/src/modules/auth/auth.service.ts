@@ -10,16 +10,21 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
-  async register(dto: { phone: string; password: string; full_name?: string }) {
-    const existing = await this.prisma.profile.findUnique({ where: { phone: dto.phone } });
-    if (existing) throw new ConflictException('Phone already registered');
+  private normalizePhone(phone?: string) {
+    return String(phone || '').replace(/[^\d+]/g, '');
+  }
+
+  async register(dto: { phone: string; password: string; fullName?: string }) {
+    const phone = this.normalizePhone(dto.phone);
+    const existing = await this.prisma.profile.findUnique({ where: { phone } });
+    if (existing) throw new ConflictException('Số điện thoại đã được đăng ký');
 
     const hashed = await bcrypt.hash(dto.password, 10);
     const user = await this.prisma.profile.create({
       data: {
-        phone: dto.phone,
+        phone,
         passwordHash: hashed,
-        fullName: dto.full_name || '',
+        fullName: dto.fullName?.trim() || '',
       },
     });
 
@@ -28,13 +33,36 @@ export class AuthService {
   }
 
   async login(dto: { phone: string; password: string }) {
-    const user = await this.prisma.profile.findUnique({ where: { phone: dto.phone } });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    const phone = this.normalizePhone(dto.phone);
+    const user = await this.prisma.profile.findFirst({
+      where: {
+        OR: [
+          { phone },
+          { phone: dto.phone },
+        ],
+      },
+    });
+    if (!user) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng');
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash || '');
-    if (!valid) throw new UnauthorizedException('Invalid credentials');
+    if (!valid) throw new UnauthorizedException('Số điện thoại hoặc mật khẩu không đúng');
 
     const token = this.jwt.sign({ sub: user.id, role: user.role });
     return { data: { token, user: { id: user.id, phone: user.phone, fullName: user.fullName, role: user.role } } };
+  }
+
+  async me(id: string) {
+    const user = await this.prisma.profile.findUnique({ where: { id } });
+    if (!user) throw new UnauthorizedException('Invalid token');
+    return {
+      data: {
+        id: user.id,
+        phone: user.phone,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        status: user.status,
+      },
+    };
   }
 }

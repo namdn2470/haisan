@@ -2,13 +2,22 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Package, Heart, MapPin, LogOut, ShoppingCart, Phone, Lock,
   Eye, EyeOff, Truck, ShieldCheck, RotateCcw, CheckCircle2, Leaf,
 } from 'lucide-react';
-import { api, img } from '@/lib/api';
+import { api, getToken, img } from '@/lib/api';
 import { money } from '@/lib/money';
+import {
+  getMe,
+  getOrders,
+  login as loginUser,
+  logout as logoutUser,
+  register as registerUser,
+} from '@/services';
+import { useAuth } from '@/contexts/AuthContext';
+import SiteShell from '@/components/shared/SiteShell';
 
 type Profile = {
   id: string; fullName?: string; phone?: string; email?: string; role: string;
@@ -17,7 +26,7 @@ type Profile = {
 type Order = {
   id: string; orderCode: string; customerName: string; totalAmount: number;
   orderStatus: string; paymentStatus: string; createdAt: string;
-  items: { productName: string; quantity: number; price: number }[];
+  items: { productName: string; quantity: number; price?: number; unitPrice?: number }[];
 };
 
 type Favorite = {
@@ -41,9 +50,11 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 export default function AccountPage() {
   return (
-    <Suspense fallback={<AccountPageFallback />}>
-      <AccountPageContent />
-    </Suspense>
+    <SiteShell>
+      <Suspense fallback={<AccountPageFallback />}>
+        <AccountPageContent />
+      </Suspense>
+    </SiteShell>
   );
 }
 
@@ -64,7 +75,10 @@ function AccountPageFallback() {
 
 function AccountPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const { login: authLogin, logout: authLogout } = useAuth();
   const tab = searchParams.get('tab') || 'profile';
+  const authMode = searchParams.get('mode');
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -80,13 +94,18 @@ function AccountPageContent() {
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (authMode === 'register') setShowLogin(false);
+    if (authMode === 'login') setShowLogin(true);
+  }, [authMode]);
+
+  useEffect(() => {
+    const token = getToken();
     if (token) {
-      api<{ data: Profile }>('/api/users/me').then(r => {
-        setProfile(r.data);
+      getMe().then(user => {
+        setProfile(user);
         setLoading(false);
       }).catch(() => setLoading(false));
-      api<{ data: Order[] }>('/api/orders').then(r => setOrders(r.data)).catch(() => {});
+      getOrders().then(data => setOrders(data as unknown as Order[])).catch(() => {});
       api<{ data: Favorite[] }>('/api/favorites').then(r => setFavorites(r.data || [])).catch(() => {});
       api<{ data: Address[] }>('/api/addresses').then(r => setAddresses(r.data || [])).catch(() => {});
     } else {
@@ -98,23 +117,27 @@ function AccountPageContent() {
     e.preventDefault();
     setAuthError('');
     try {
-      const endpoint = showLogin ? '/api/auth/login' : '/api/auth/register';
-      const body = showLogin
-        ? { phone: authForm.phone, password: authForm.password }
-        : { phone: authForm.phone, password: authForm.password, full_name: authForm.fullName };
-      const res = await api<{ data: { token: string; user: Profile } }>(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
-      localStorage.setItem('token', res.data.token);
-      setProfile(res.data.user);
-    } catch {
-      setAuthError(showLogin ? 'Sai số điện thoại hoặc mật khẩu' : 'Đăng ký thất bại');
+      const res = showLogin
+        ? await loginUser(authForm.phone, authForm.password)
+        : await registerUser(authForm.phone, authForm.password, authForm.fullName);
+      authLogin(res.token, res.user);
+      if (showLogin) {
+        setProfile(res.user);
+        router.push('/');
+      } else {
+        setProfile(res.user);
+        setAuthForm(prev => ({ ...prev, password: '', fullName: '' }));
+        setAuthError('');
+        router.push('/account');
+      }
+    } catch (err: any) {
+      setAuthError(err?.message || (showLogin ? 'Sai số điện thoại hoặc mật khẩu' : 'Đăng ký thất bại'));
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    logoutUser();
+    authLogout();
     setProfile(null);
     setOrders([]);
     setFavorites([]);
@@ -169,6 +192,13 @@ function AccountPageContent() {
     }
   };
 
+  const switchAuthMode = (login: boolean) => {
+    setShowLogin(login);
+    setAuthError('');
+    setShowPass(false);
+    router.replace(`/account?mode=${login ? 'login' : 'register'}`);
+  };
+
   /* ========== AUTH PAGE (LOGIN / REGISTER) ========== */
   if (!profile && !loading) {
     return (
@@ -178,7 +208,7 @@ function AccountPageContent() {
           <div className="auth-left-content">
             <Link href="/" className="auth-left-logo">
               <div className="auth-left-logo-icon">
-                <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="48" height="48" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M6 24c3-4 7-6 12-6s6 3 6 3 3-3 6-3 9 3 12 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
                   <path d="M6 30c3-4 7-6 12-6s6 3 6 3 3-3 6-3 9 3 12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4"/>
                 </svg>
@@ -250,13 +280,13 @@ function AccountPageContent() {
             <div className="auth-toggle">
               <button
                 className={`auth-toggle-btn ${showLogin ? 'active' : ''}`}
-                onClick={() => { setShowLogin(true); setAuthError(''); setShowPass(false); }}
+                onClick={() => switchAuthMode(true)}
               >
                 Đăng nhập
               </button>
               <button
                 className={`auth-toggle-btn ${!showLogin ? 'active' : ''}`}
-                onClick={() => { setShowLogin(false); setAuthError(''); setShowPass(false); }}
+                onClick={() => switchAuthMode(false)}
               >
                 Đăng ký
               </button>
@@ -277,6 +307,7 @@ function AccountPageContent() {
                     <User size={18} />
                     <input
                       type="text"
+                      required
                       value={authForm.fullName}
                       onChange={e => setAuthForm(f => ({ ...f, fullName: e.target.value }))}
                       placeholder="Nguyễn Văn A"
@@ -324,31 +355,12 @@ function AccountPageContent() {
               </button>
             </form>
 
-            <div className="auth-divider">
-              <span>hoặc</span>
-            </div>
-
-            <div className="auth-social">
-              <button className="auth-social-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                Google
-              </button>
-              <button className="auth-social-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="4" fill="#0068FF"/><path d="M17.5 12.5c0-2.5-2-4.5-4.5-4.5s-4.5 2-4.5 4.5c0 2 1.4 3.7 3.3 4.3l.7-2.7c-1.2-.4-2-1.5-2-2.6h2.5c0 .8.7 1.5 1.5 1.5s1.5-.7 1.5-1.5h2.5c0 1.1-.8 2.2-2 2.6l.7 2.7c1.9-.6 3.3-2.3 3.3-4.3z" fill="white"/></svg>
-                Zalo
-              </button>
-              <button className="auth-social-btn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 6.04 2 11c0 2.83 1.44 5.35 3.68 7.02V22l3.36-1.85c.9.25 1.84.39 2.96.39 5.52 0 10-4.04 10-9S17.52 2 12 2z" fill="#25D366"/><path d="M9.2 10.5l3.5-2.5 1.7 1.7-1.7 1.7-3.5-2.5-.5.6" fill="white" opacity="0.8"/></svg>
-                Zalo OA
-              </button>
-            </div>
-
-            <p className="auth-switch-text">
-              {showLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}
-              <button onClick={() => { setShowLogin(!showLogin); setAuthError(''); setShowPass(false); }}>
+            <div className="auth-switch-text">
+              <span>{showLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}</span>
+              <button onClick={() => switchAuthMode(!showLogin)}>
                 {showLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
               </button>
-            </p>
+            </div>
 
             <Link href="/" className="auth-back-home">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -377,35 +389,17 @@ function AccountPageContent() {
 
   return (
     <>
-      {/* Header */}
-      <header className="ac-header">
-        <div className="ac-container ac-header-inner">
-          <Link href="/" className="ac-logo">
-            <div className="ac-logo-icon">
-              <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M4 20c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-                <path d="M4 24c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5"/>
-              </svg>
-            </div>
-            <span className="ac-logo-text">HẢI SẢN BIỂN XANH</span>
-          </Link>
-          <div className="ac-header-center">
-            <h1>Tài khoản</h1>
-          </div>
-          <div className="ac-header-right">
-            <Link href="/products" className="ac-header-link">
-              <ShoppingCart size={20} />
-              <span>Mua sắm</span>
-            </Link>
-            <div className="ac-header-user">
-              <div className="ac-header-avatar">{profile?.fullName?.[0] || 'U'}</div>
-              <span className="ac-header-name">{profile?.fullName || 'User'}</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <main className="ac-container">
+        <section className="hs-page-toolbar">
+          <div>
+            <h1>Tài khoản</h1>
+            <p>Quản lý thông tin, đơn hàng, địa chỉ và sản phẩm yêu thích</p>
+          </div>
+          <Link href="/products" className="hs-btn-primary">
+            <ShoppingCart size={18} />
+            Mua sắm
+          </Link>
+        </section>
         <div className="ac-layout">
           {/* Sidebar */}
           <aside className="ac-sidebar">
@@ -580,7 +574,7 @@ function AccountPageContent() {
                                 <div className="ac-order-item-row" key={i}>
                                   <span className="ac-order-item-name">{item.productName}</span>
                                   <span className="ac-order-item-qty">x{item.quantity}</span>
-                                  <span className="ac-order-item-price">{money(Number(item.price))}</span>
+                                  <span className="ac-order-item-price">{money(Number(item.price ?? item.unitPrice ?? 0))}</span>
                                 </div>
                               ))}
                             </div>
@@ -622,7 +616,8 @@ function AccountPageContent() {
                       {favorites.map(f => (
                         <Link key={f.id} href={`/products/${f.product.slug}`} className="ac-fav-card">
                           <div className="ac-fav-img">
-                            <img src={f.product.images?.[0]?.imageUrl || img('prod-tom.jpg')} alt={f.product.name} />
+                            <img src={(() => { const first = f.product.images?.[0]; return !first ? img('prod-tom.jpg') : typeof first === 'string' ? first : first.imageUrl; })()} alt={f.product.name}
+                              onError={(e) => { const t = e.currentTarget; if (!t.dataset.fallback) { t.dataset.fallback = 'true'; t.src = 'https://images.pexels.com/photos/14480456/pexels-photo-14480456.jpeg?auto=compress&cs=tinysrgb&w=400'; } }} />
                           </div>
                           <div className="ac-fav-info">
                             <b>{f.product.name}</b>

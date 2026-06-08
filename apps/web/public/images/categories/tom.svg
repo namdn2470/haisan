@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="100%" stop-color="#fde68a"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)" rx="12"/>
+  <!-- Tôm illustration -->
+  <g transform="translate(100, 60)">
+    <ellipse cx="100" cy="90" rx="75" ry="35" fill="#f97316" transform="rotate(-10, 100, 90)"/>
+    <ellipse cx="88" cy="82" rx="60" ry="27" fill="#fb923c" transform="rotate(-10, 88, 82)"/>
+    <ellipse cx="75" cy="75" rx="45" ry="20" fill="#fdba74" transform="rotate(-10, 75, 75)"/>
+    <!-- Tail -->
+    <path d="M175 95 Q200 70 195 95 Q190 120 175 95" fill="#ea580c"/>
+    <!-- Antennae -->
+    <path d="M30 70 Q10 35 25 15" stroke="#f97316" stroke-width="2.5" fill="none"/>
+    <path d="M38 78 Q18 48 33 28" stroke="#fb923c" stroke-width="2" fill="none"/>
+    <!-- Legs -->
+    <path d="M55 112 Q45 140 40 160" stroke="#f97316" stroke-width="3" fill="none"/>
+    <path d="M80 118 Q70 148 65 168" stroke="#f97316" stroke-width="3" fill="none"/>
+    <path d="M105 124 Q95 154 90 175" stroke="#fb923c" stroke-width="3" fill="none"/>
+  </g>
+  <!-- Icon -->
+  <g transform="translate(300, 200)">
+    <circle cx="40" cy="40" r="38" fill="#dc2626"/>
+    <text x="40" y="52" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="white" text-anchor="middle">T</text>
+  </g>
+</svg>

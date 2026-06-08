@@ -16,13 +16,13 @@ export class CartsController {
   }
 
   @Put('items/:itemId')
-  updateItem(@Param('itemId') itemId: string, @Body() dto: any) {
-    return this.service.updateItem(itemId, dto);
+  updateItem(@Req() req: any, @Param('itemId') itemId: string, @Body() dto: any) {
+    return this.service.updateItem(req.user.sub, itemId, dto);
   }
 
   @Delete('items/:itemId')
-  removeItem(@Param('itemId') itemId: string) {
-    return this.service.removeItem(itemId);
+  removeItem(@Req() req: any, @Param('itemId') itemId: string) {
+    return this.service.removeItem(req.user.sub, itemId);
   }
 
   @Delete()

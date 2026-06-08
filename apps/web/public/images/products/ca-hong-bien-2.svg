@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0e7ff"/>
+      <stop offset="100%" stop-color="#c7d2fe"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)" rx="12"/>
+  <!-- Cá bớp - grouper fish -->
+  <g filter="url(#shadow)" transform="translate(55, 75)">
+    <!-- Body -->
+    <ellipse cx="135" cy="80" rx="105" ry="55" fill="#4338ca"/>
+    <ellipse cx="132" cy="76" rx="98" ry="48" fill="#4f46e5"/>
+    <ellipse cx="128" cy="73" rx="85" ry="40" fill="#6366f1"/>
+    <!-- Pattern spots -->
+    <g fill="#3730a3" opacity="0.4">
+      <circle cx="90" cy="70" r="8"/>
+      <circle cx="120" cy="60" r="10"/>
+      <circle cx="150" cy="75" r="7"/>
+      <circle cx="175" cy="65" r="9"/>
+      <circle cx="110" cy="90" r="6"/>
+      <circle cx="145" cy="88" r="8"/>
+    </g>
+    <!-- Dorsal fin -->
+    <path d="M95 28 Q115 0 140 10 Q165 20 170 38" fill="#4338ca"/>
+    <path d="M100 32 Q118 8 140 16 Q162 24 168 38" fill="#4f46e5"/>
+    <!-- Tail fin -->
+    <path d="M240 80 Q290 40 275 80 Q260 120 240 80" fill="#3730a3"/>
+    <path d="M238 80 Q280 50 268 80 Q256 110 238 80" fill="#4338ca"/>
+    <!-- Eye -->
+    <circle cx="55" cy="70" r="14" fill="white"/>
+    <circle cx="55" cy="70" r="10" fill="#1e1b4b"/>
+    <circle cx="52" cy="67" r="4" fill="white"/>
+    <!-- Mouth -->
+    <path d="M25 75 Q38 82 50 78" stroke="#312e81" stroke-width="3" fill="none"/>
+    <!-- Gill -->
+    <path d="M68 62 Q62 80 68 98" stroke="#3730a3" stroke-width="2" fill="none" opacity="0.5"/>
+    <!-- Pectoral fin -->
+    <path d="M95 105 Q108 130 90 138 Q72 130 95 105" fill="#4f46e5"/>
+    <!-- Ventral fin -->
+    <path d="M115 115 Q122 135 110 140 Q98 132 115 115" fill="#6366f1"/>
+  </g>
+  <!-- Label -->
+  <rect x="20" y="235" width="100" height="45" rx="8" fill="#3730a3"/>
+  <text x="70" y="265" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">Cá Bớp</text>
+  <text x="340" y="265" font-family="Arial, sans-serif" font-size="12" fill="#3730a3" text-anchor="middle">Biển</text>
+</svg>

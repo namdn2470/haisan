@@ -1,41 +1,146 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@hsbx/db';
 
 @Injectable()
 export class PromotionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    const data = await this.prisma.promotion.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-    return { data };
+  async findAll(params: {
+    search?: string;
+    isActive?: boolean;
+    page?: number;
+    limit?: number;
+  }) {
+    const { search, isActive, page = 1, limit = 20 } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (isActive !== undefined) where.isActive = isActive;
+    if (search) {
+      where.OR = [
+        { code: { contains: search, mode: 'insensitive' } },
+        { name: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.promotion.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.promotion.count({ where }),
+    ]);
+
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async findOne(id: string) {
     const data = await this.prisma.promotion.findUnique({ where: { id } });
-    if (!data) throw new NotFoundException('Promotion not found');
+    if (!data) throw new NotFoundException('Khuyến mãi không tồn tại');
     return { data };
   }
 
   async findByCode(code: string) {
-    const data = await this.prisma.promotion.findUnique({ where: { code } });
-    if (!data) throw new NotFoundException('Promotion not found');
+    const now = new Date();
+    const data = await this.prisma.promotion.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        isActive: true,
+        startAt: { lte: now },
+        endAt: { gte: now },
+      },
+    });
+    if (!data || (data.usageLimit !== null && data.usedCount >= data.usageLimit)) {
+      throw new NotFoundException('Khuyến mãi không tồn tại');
+    }
     return { data };
   }
 
   async create(dto: any) {
-    const data = await this.prisma.promotion.create({ data: dto });
+    const code = (dto.code || '').trim().toUpperCase();
+    if (!code) throw new BadRequestException('Mã giảm giá là bắt buộc');
+    if (!dto.name?.trim()) throw new BadRequestException('Tên chương trình là bắt buộc');
+    if (!dto.discountType) throw new BadRequestException('Loại giảm giá là bắt buộc');
+    if (!dto.discountValue && dto.discountValue !== 0) throw new BadRequestException('Giá trị giảm là bắt buộc');
+    if (!dto.startAt) throw new BadRequestException('Ngày bắt đầu là bắt buộc');
+    if (!dto.endAt) throw new BadRequestException('Ngày kết thúc là bắt buộc');
+
+    const existing = await this.prisma.promotion.findUnique({ where: { code } });
+    if (existing) throw new BadRequestException(`Mã "${code}" đã tồn tại`);
+
+    const data = await this.prisma.promotion.create({
+      data: {
+        code,
+        name: dto.name.trim(),
+        description: dto.description?.trim() || null,
+        discountType: dto.discountType,
+        discountValue: dto.discountValue,
+        minOrderAmount: dto.minOrderAmount || 0,
+        maxDiscountAmount: dto.maxDiscountAmount || null,
+        startAt: new Date(dto.startAt),
+        endAt: new Date(dto.endAt),
+        usageLimit: dto.usageLimit || null,
+        usedCount: 0,
+        isActive: dto.isActive !== false,
+      },
+    });
+
     return { data };
   }
 
   async update(id: string, dto: any) {
-    const data = await this.prisma.promotion.update({ where: { id }, data: dto });
+    const existing = await this.prisma.promotion.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundException('Khuyến mãi không tồn tại');
+
+    const code = dto.code ? dto.code.trim().toUpperCase() : existing.code;
+    if (dto.code && dto.code.trim().toUpperCase() !== existing.code) {
+      const duplicate = await this.prisma.promotion.findUnique({ where: { code } });
+      if (duplicate) throw new BadRequestException(`Mã "${code}" đã tồn tại`);
+    }
+
+    const updateData: any = {};
+    if (dto.code !== undefined) updateData.code = code;
+    if (dto.name !== undefined) updateData.name = dto.name.trim();
+    if (dto.description !== undefined) updateData.description = dto.description?.trim() || null;
+    if (dto.discountType !== undefined) updateData.discountType = dto.discountType;
+    if (dto.discountValue !== undefined) updateData.discountValue = dto.discountValue;
+    if (dto.minOrderAmount !== undefined) updateData.minOrderAmount = dto.minOrderAmount;
+    if (dto.maxDiscountAmount !== undefined) updateData.maxDiscountAmount = dto.maxDiscountAmount || null;
+    if (dto.startAt !== undefined) updateData.startAt = new Date(dto.startAt);
+    if (dto.endAt !== undefined) updateData.endAt = new Date(dto.endAt);
+    if (dto.usageLimit !== undefined) updateData.usageLimit = dto.usageLimit || null;
+    if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
+
+    const data = await this.prisma.promotion.update({
+      where: { id },
+      data: updateData,
+    });
+
     return { data };
   }
 
   async remove(id: string) {
+    const promo = await this.prisma.promotion.findUnique({
+      where: { id },
+      include: { orderCoupons: { select: { id: true } } },
+    });
+
+    if (!promo) throw new NotFoundException('Khuyến mãi không tồn tại');
+
+    if (promo.orderCoupons && promo.orderCoupons.length > 0) {
+      await this.prisma.promotion.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      return {
+        message: 'Khuyến mãi đã được sử dụng nên được chuyển sang trạng thái ẩn',
+        softDeleted: true,
+      };
+    }
+
     await this.prisma.promotion.delete({ where: { id } });
-    return { message: 'Deleted' };
+    return { message: 'Đã xóa khuyến mãi', softDeleted: false };
   }
 }

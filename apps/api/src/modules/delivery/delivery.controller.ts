@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Put, Param, Body, Query } from '@nestjs/common';
 import { DeliveryService } from './delivery.service';
+import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
 
+@Roles(...ADMIN_ROLES)
 @Controller('delivery')
 export class DeliveryController {
   constructor(private readonly service: DeliveryService) {}

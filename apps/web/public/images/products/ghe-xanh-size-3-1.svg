@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#dbeafe"/>
+      <stop offset="100%" stop-color="#93c5fd"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)" rx="12"/>
+  <!-- Ghẹ xanh - round crab shell -->
+  <g filter="url(#shadow)" transform="translate(100, 50)">
+    <!-- Shell -->
+    <ellipse cx="100" cy="100" rx="85" ry="65" fill="#059669"/>
+    <ellipse cx="100" cy="95" rx="78" ry="58" fill="#10b981"/>
+    <ellipse cx="100" cy="90" rx="70" ry="50" fill="#34d399"/>
+    <!-- Shell pattern - ridges -->
+    <path d="M50 85 Q100 60 150 85" stroke="#059669" stroke-width="2" fill="none" opacity="0.4"/>
+    <path d="M45 100 Q100 75 155 100" stroke="#059669" stroke-width="2" fill="none" opacity="0.4"/>
+    <path d="M50 115 Q100 90 150 115" stroke="#059669" stroke-width="2" fill="none" opacity="0.4"/>
+    <!-- Eyes -->
+    <ellipse cx="70" cy="45" rx="12" ry="18" fill="#059669"/>
+    <ellipse cx="130" cy="45" rx="12" ry="18" fill="#059669"/>
+    <circle cx="70" cy="42" r="5" fill="#1f2937"/>
+    <circle cx="130" cy="42" r="5" fill="#1f2937"/>
+    <!-- Claws -->
+    <ellipse cx="25" cy="95" rx="28" ry="22" fill="#059669"/>
+    <ellipse cx="30" cy="92" rx="22" ry="18" fill="#10b981"/>
+    <path d="M10 75 Q15 55 30 60 Q45 65 40 80" fill="#059669"/>
+    <path d="M5 70 Q10 50 25 55 Q40 60 35 75" fill="#059669"/>
+    <ellipse cx="175" cy="95" rx="28" ry="22" fill="#059669"/>
+    <ellipse cx="170" cy="92" rx="22" ry="18" fill="#10b981"/>
+    <path d="M190 75 Q185 55 170 60 Q155 65 160 80" fill="#059669"/>
+    <path d="M195 70 Q190 50 175 55 Q160 60 165 75" fill="#059669"/>
+    <!-- Legs -->
+    <path d="M40 140 Q30 170 25 195" stroke="#059669" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M65 145 Q55 175 50 200" stroke="#059669" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M135 145 Q145 175 150 200" stroke="#059669" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M160 140 Q170 170 175 195" stroke="#059669" stroke-width="8" fill="none" stroke-linecap="round"/>
+  </g>
+  <!-- Label -->
+  <rect x="20" y="235" width="110" height="45" rx="8" fill="#059669"/>
+  <text x="75" y="265" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">Ghẹ Xanh</text>
+  <text x="340" y="265" font-family="Arial, sans-serif" font-size="12" fill="#065f46" text-anchor="middle">Size 3</text>
+</svg>

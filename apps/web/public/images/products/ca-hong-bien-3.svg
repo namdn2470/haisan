@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ccfbf1"/>
+      <stop offset="100%" stop-color="#99f6e4"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <rect width="400" height="300" fill="url(#bg)" rx="12"/>
+  <!-- Cá thu - mackerel -->
+  <g filter="url(#shadow)" transform="translate(50, 85)">
+    <!-- Body - elongated -->
+    <ellipse cx="150" cy="70" rx="120" ry="35" fill="#0891b2"/>
+    <ellipse cx="148" cy="68" rx="115" ry="30" fill="#06b6d4"/>
+    <ellipse cx="145" cy="66" rx="100" ry="24" fill="#22d3ee"/>
+    <!-- Stripes -->
+    <g stroke="#0e7490" stroke-width="3" fill="none" opacity="0.4">
+      <path d="M70 50 Q75 70 70 90"/>
+      <path d="M100 45 Q107 68 100 90"/>
+      <path d="M130 42 Q138 66 130 88"/>
+      <path d="M160 40 Q168 64 160 86"/>
+      <path d="M190 42 Q198 66 190 88"/>
+      <path d="M220 45 Q228 68 220 90"/>
+    </g>
+    <!-- Dorsal fin -->
+    <path d="M130 35 Q145 10 165 20 Q180 30 185 42" fill="#0891b2"/>
+    <path d="M135 38 Q148 15 165 24 Q180 33 183 43" fill="#06b6d4"/>
+    <!-- Tail fin - forked -->
+    <path d="M270 70 Q320 30 305 70 Q290 110 270 70" fill="#0e7490"/>
+    <path d="M268 70 Q310 40 298 70 Q286 100 268 70" fill="#0891b2"/>
+    <!-- Eye -->
+    <circle cx="50" cy="62" r="10" fill="white"/>
+    <circle cx="50" cy="62" r="7" fill="#164e63"/>
+    <circle cx="48" cy="60" r="2.5" fill="white"/>
+    <!-- Mouth -->
+    <path d="M22 65 Q32 70 42 68" stroke="#0c4a6e" stroke-width="2" fill="none"/>
+    <!-- Gill -->
+    <path d="M58 55 Q52 68 58 80" stroke="#0e7490" stroke-width="2" fill="none" opacity="0.5"/>
+    <!-- Pectoral fin -->
+    <path d="M90 88 Q100 105 85 112 Q72 105 90 88" fill="#06b6d4"/>
+    <!-- Silver belly -->
+    <ellipse cx="145" cy="78" rx="100" ry="12" fill="#a5f3fc" opacity="0.5"/>
+  </g>
+  <!-- Label -->
+  <rect x="20" y="235" width="100" height="45" rx="8" fill="#0891b2"/>
+  <text x="70" y="265" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="white" text-anchor="middle">Cá Thu</text>
+  <text x="340" y="265" font-family="Arial, sans-serif" font-size="12" fill="#155e75" text-anchor="middle">Tươi</text>
+</svg>

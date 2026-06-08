@@ -1,18 +1,31 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, Req } from '@nestjs/common';
 import { BannersService } from './banners.service';
 import { Public } from '../../common/public.decorator';
+import { ADMIN_ROLES, isAdminRole, Roles } from '../../common/roles.decorator';
 
+@Roles(...ADMIN_ROLES)
 @Controller('banners')
 export class BannersController {
   constructor(private readonly service: BannersService) {}
 
   @Public()
   @Get()
-  findAll(@Query('position') position?: string) {
-    return this.service.findAll(position);
+  findAll(
+    @Query('position') position?: string,
+    @Query('isActive') isActive?: string,
+    @Query('search') search?: string,
+    @Req() req?: any,
+  ) {
+    const isActiveBool = isActive === 'true' ? true : isActive === 'false' ? false : undefined;
+    const admin = isAdminRole(req?.user?.role);
+    return this.service.findAll({
+      position,
+      isActive: admin ? isActiveBool : true,
+      search: admin ? search : undefined,
+      publicOnly: !admin,
+    });
   }
 
-  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);

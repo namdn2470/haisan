@@ -16,12 +16,12 @@ export class AddressesController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.service.update(id, dto);
+  update(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    return this.service.update(req.user.sub, id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Req() req: any, @Param('id') id: string) {
+    return this.service.remove(req.user.sub, id);
   }
 }

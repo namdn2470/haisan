@@ -1,15 +1,27 @@
-import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query } from '@nestjs/common';
 import { PromotionsService } from './promotions.service';
 import { Public } from '../../common/public.decorator';
+import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
 
+@Roles(...ADMIN_ROLES)
 @Controller('promotions')
 export class PromotionsController {
   constructor(private readonly service: PromotionsService) {}
 
-  @Public()
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(
+    @Query('search') search?: string,
+    @Query('isActive') isActive?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const isActiveBool = isActive === 'true' ? true : isActive === 'false' ? false : undefined;
+    return this.service.findAll({
+      search,
+      isActive: isActiveBool,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 20,
+    });
   }
 
   @Public()
@@ -18,7 +30,6 @@ export class PromotionsController {
     return this.service.findByCode(code);
   }
 
-  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);

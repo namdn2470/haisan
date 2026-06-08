@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@hsbx/db';
 
 @Injectable()
@@ -44,7 +44,12 @@ export class CartsService {
     return { data: item };
   }
 
-  async updateItem(itemId: string, dto: any) {
+  async updateItem(userId: string, itemId: string, dto: any) {
+    const existing = await this.prisma.cartItem.findFirst({
+      where: { id: itemId, cart: { userId, status: 'ACTIVE' } },
+    });
+    if (!existing) throw new NotFoundException('Cart item not found');
+
     const item = await this.prisma.cartItem.update({
       where: { id: itemId },
       data: { quantity: dto.quantity },
@@ -53,7 +58,12 @@ export class CartsService {
     return { data: item };
   }
 
-  async removeItem(itemId: string) {
+  async removeItem(userId: string, itemId: string) {
+    const existing = await this.prisma.cartItem.findFirst({
+      where: { id: itemId, cart: { userId, status: 'ACTIVE' } },
+    });
+    if (!existing) throw new NotFoundException('Cart item not found');
+
     await this.prisma.cartItem.delete({ where: { id: itemId } });
     return { message: 'Item removed' };
   }

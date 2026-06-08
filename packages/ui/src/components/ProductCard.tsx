@@ -1,5 +1,4 @@
 import { Star, Plus } from 'lucide-react';
-import { Badge } from './Badge';
 import { PRODUCT_BADGE_LABEL } from '@hsbx/shared';
 
 interface ProductCardProps {

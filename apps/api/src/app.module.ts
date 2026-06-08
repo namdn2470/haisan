@@ -16,6 +16,14 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { ShippingZonesModule } from './modules/shipping-zones/shipping-zones.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
+import { StaffModule } from './modules/staff/staff.module';
+import { RolesModule } from './modules/roles/roles.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { ConfigModule } from './modules/config/config.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -36,6 +44,14 @@ import { AddressesModule } from './modules/addresses/addresses.module';
     DashboardModule,
     FavoritesModule,
     AddressesModule,
+    PostsModule,
+    ShippingZonesModule,
+    InventoryModule,
+    StaffModule,
+    RolesModule,
+    ReportsModule,
+    ConfigModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}
