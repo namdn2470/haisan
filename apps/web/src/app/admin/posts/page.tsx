@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Search, Filter, Edit2, Trash2, AlertTriangle,
-  FileText, Eye, EyeOff, X, Image as ImageIcon,
+  FileText, Eye, EyeOff,
 } from 'lucide-react';
 import { useToast, useConfirm } from '../layout';
 import {
@@ -13,6 +13,8 @@ import {
   updatePost,
   deletePost,
 } from '@/lib/admin/api';
+import PostFormModal from '@/components/admin/posts/PostFormModal';
+import type { PostFormData } from '@/components/admin/posts/PostFormModal';
 
 interface Post {
   id: string;
@@ -55,7 +57,7 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-const EMPTY_FORM = {
+const EMPTY_POST_FORM: PostFormData = {
   title: '',
   slug: '',
   thumbnailUrl: '',
@@ -83,7 +85,7 @@ export default function PostsPage() {
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingPost, setEditingPost] = useState<Post | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<PostFormData>(EMPTY_POST_FORM);
   const [saving, setSaving] = useState(false);
   const [slugManual, setSlugManual] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -143,7 +145,7 @@ export default function PostsPage() {
   };
 
   const openCreate = () => {
-    setForm(EMPTY_FORM);
+    setForm(EMPTY_POST_FORM);
     setSlugManual(false);
     setFormErrors({});
     setModalMode('create');
@@ -178,7 +180,7 @@ export default function PostsPage() {
   const closeModal = () => {
     setShowModal(false);
     setEditingPost(null);
-    setForm(EMPTY_FORM);
+    setForm(EMPTY_POST_FORM);
     setFormErrors({});
   };
 
@@ -559,209 +561,19 @@ export default function PostsPage() {
         )}
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="adm-modal-overlay" onClick={e => e.target === e.currentTarget && closeModal()}>
-          <div className="adm-modal adm-modal-lg">
-            <div className="adm-modal-header">
-              <h3>{modalMode === 'create' ? 'Thêm bài viết mới' : 'Chỉnh sửa bài viết'}</h3>
-              <button className="adm-modal-close" onClick={closeModal}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit}>
-              <div className="adm-modal-body" style={{ padding: 20, maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' as const }}>
-
-                {/* Basic Info */}
-                <div className="adm-form-section">
-                  <div className="adm-form-section-title">Thông tin cơ bản</div>
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">Tiêu đề <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input
-                        type="text"
-                        className={`adm-input ${formErrors.title ? 'error' : ''}`}
-                        value={form.title}
-                        onChange={e => handleFormChange('title', e.target.value)}
-                        placeholder="Nhập tiêu đề bài viết..."
-                      />
-                      {formErrors.title && <span className="adm-form-error">{formErrors.title}</span>}
-                    </div>
-                  </div>
-
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">Slug <span style={{ color: '#ef4444' }}>*</span></label>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <input
-                          type="text"
-                          className={`adm-input ${formErrors.slug ? 'error' : ''}`}
-                          value={form.slug}
-                          onChange={e => { setSlugManual(true); handleFormChange('slug', e.target.value); }}
-                          placeholder="slug-bai-viet"
-                        />
-                        {!slugManual && (
-                          <span style={{ fontSize: 12, color: '#64748b', whiteSpace: 'nowrap' }}>
-                            (tự động)
-                          </span>
-                        )}
-                      </div>
-                      {formErrors.slug && <span className="adm-form-error">{formErrors.slug}</span>}
-                    </div>
-                  </div>
-
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">Mô tả ngắn</label>
-                      <textarea
-                        className="adm-input"
-                        rows={2}
-                        value={form.excerpt}
-                        onChange={e => handleFormChange('excerpt', e.target.value)}
-                        placeholder="Mô tả ngắn gọn cho bài viết..."
-                        style={{ resize: 'vertical' }}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">Nội dung</label>
-                      <textarea
-                        className="adm-input"
-                        rows={8}
-                        value={form.content}
-                        onChange={e => handleFormChange('content', e.target.value)}
-                        placeholder="Nội dung bài viết..."
-                        style={{ resize: 'vertical', fontFamily: 'inherit' }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Image */}
-                <div className="adm-form-section">
-                  <div className="adm-form-section-title">Hình ảnh</div>
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">Ảnh đại diện</label>
-                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <div style={{
-                          width: 100,
-                          height: 75,
-                          borderRadius: 8,
-                          overflow: 'hidden',
-                          background: '#f1f5f9',
-                          border: '1px solid #e2e8f0',
-                          flexShrink: 0,
-                        }}>
-                          {form.thumbnailUrl ? (
-                            <img
-                              src={form.thumbnailUrl}
-                              alt="Thumbnail"
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' as const }}
-                              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#cbd5e1',
-                            }}>
-                              <ImageIcon size={24} />
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <input
-                            type="text"
-                            className="adm-input"
-                            value={form.thumbnailUrl}
-                            onChange={e => handleFormChange('thumbnailUrl', e.target.value)}
-                            placeholder="Nhập URL ảnh đại diện..."
-                          />
-                          <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-                            Dán URL ảnh từ Cloudinary, Imgur hoặc dịch vụ lưu trữ khác
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="adm-form-section">
-                  <div className="adm-form-section-title">Trạng thái</div>
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">Trạng thái</label>
-                      <select
-                        className="adm-select"
-                        value={form.status}
-                        onChange={e => handleFormChange('status', e.target.value)}
-                      >
-                        <option value="DRAFT">Bản nháp</option>
-                        <option value="PUBLISHED">Đã đăng</option>
-                        <option value="HIDDEN">Đã ẩn</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SEO */}
-                <div className="adm-form-section">
-                  <div className="adm-form-section-title">SEO</div>
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">SEO Title</label>
-                      <input
-                        type="text"
-                        className="adm-input"
-                        value={form.seoTitle}
-                        onChange={e => handleFormChange('seoTitle', e.target.value)}
-                        placeholder="Tiêu đề SEO (mặc định dùng tiêu đề bài viết)"
-                      />
-                      <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-                        {form.seoTitle.length}/60 ký tự
-                      </span>
-                    </div>
-                  </div>
-                  <div className="adm-form-row">
-                    <div className="adm-form-group" style={{ flex: 1 }}>
-                      <label className="adm-label">SEO Description</label>
-                      <textarea
-                        className="adm-input"
-                        rows={2}
-                        value={form.seoDescription}
-                        onChange={e => handleFormChange('seoDescription', e.target.value)}
-                        placeholder="Mô tả SEO cho bài viết..."
-                        style={{ resize: 'vertical' }}
-                      />
-                      <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-                        {form.seoDescription.length}/160 ký tự
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <div className="adm-modal-footer">
-                <button type="button" className="adm-btn-secondary" onClick={closeModal}>
-                  Hủy
-                </button>
-                <button type="submit" className="adm-btn-primary" disabled={saving}>
-                  {saving ? 'Đang lưu...' : modalMode === 'create' ? 'Thêm bài viết' : 'Lưu thay đổi'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Post Form Modal */}
+      <PostFormModal
+        isOpen={showModal}
+        mode={modalMode}
+        form={form}
+        slugManual={slugManual}
+        formErrors={formErrors}
+        saving={saving}
+        onClose={closeModal}
+        onChange={handleFormChange}
+        onSlugManualChange={setSlugManual}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
   FileText,
   Image,
   Star,
+  Bell,
   Truck,
   Warehouse,
   UserCog,
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
     label: 'Tổng quan',
     items: [
       { href: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', badge: null },
+      { href: '/admin/notifications', icon: Bell, label: 'Thông báo', badge: null },
     ],
   },
   {

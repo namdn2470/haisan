@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import {
+  ShoppingCart,
+  CreditCard,
+  Truck,
+  CheckCircle2,
+  Bell,
+  ExternalLink,
+} from 'lucide-react';
 import { fetchDashboardStats, fetchDashboardRevenue, fetchDashboardBestSellers, fetchOrders, fetchNotifications } from '@/lib/admin/api';
 import DateRangePicker from '@/components/admin/dashboard/DateRangePicker';
-import AdminKpiGrid from '@/components/admin/dashboard/AdminKpiGrid';
 import RevenueLineChart from '@/components/admin/dashboard/RevenueLineChart';
 import OrderStatusDonut from '@/components/admin/dashboard/OrderStatusDonut';
 import AdminNotifications from '@/components/admin/dashboard/AdminNotifications';
@@ -54,6 +62,60 @@ interface NewOrder {
   orderStatus: string;
 }
 
+// ——— Dashboard Header ———
+function DashboardHeader() {
+  return (
+    <div className="db-header">
+      <div className="db-header-left">
+        <h1 className="db-title">Dashboard</h1>
+        <p className="db-subtitle">Tổng quan hoạt động cửa hàng hôm nay</p>
+      </div>
+      <div className="db-header-actions">
+        <Link href="/" target="_blank" className="db-btn-outline">
+          <ExternalLink size={15} />
+          Xem website
+        </Link>
+        <DateRangePicker />
+      </div>
+    </div>
+  );
+}
+
+// ——— KPI Stats Data ———
+const KPI_ICONS = {
+  'shopping-bag': ShoppingCart,
+  'wallet': CreditCard,
+  'package': CheckCircle2,
+  'truck': Truck,
+  'check': CheckCircle2,
+};
+
+// ——— Stat Card ———
+function StatCard({ label, value, change, icon, gradient }: {
+  label: string;
+  value: string;
+  change: string;
+  icon: string;
+  gradient: string;
+}) {
+  const IconComponent = KPI_ICONS[icon as keyof typeof KPI_ICONS] || Bell;
+  const isPositive = change.includes('+');
+
+  return (
+    <div className="stat-card">
+      <div className="stat-card-inner">
+        <div className="stat-card-label">{label}</div>
+        <div className="stat-card-value">{value}</div>
+        <div className={`stat-card-change ${isPositive ? 'positive' : 'neutral'}`}>{change}</div>
+      </div>
+      <div className="stat-card-icon" style={{ background: gradient }}>
+        <IconComponent size={22} color="#fff" />
+      </div>
+    </div>
+  );
+}
+
+// ——— Main Dashboard ———
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenue, setRevenue] = useState<RevenueData[]>([]);
@@ -119,7 +181,7 @@ export default function DashboardPage() {
     } finally {
       setPendingLoading(false);
     }
-  }, [stats]);
+  }, []);
 
   useEffect(() => {
     if (!stats) {
@@ -162,50 +224,7 @@ export default function DashboardPage() {
     }
   }, [loading, pendingPage, loadPendingOrders, loadNewOrders]);
 
-  const kpiStats = stats ? [
-    {
-      label: 'Tổng đơn hàng',
-      value: stats.today_orders.toString(),
-      change: '+15% so với tuần trước',
-      icon: 'shopping-bag',
-      color: '#0891b2',
-      gradient: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)',
-    },
-    {
-      label: 'Doanh thu',
-      value: `${(Number(stats.today_revenue) / 1000000).toFixed(1)}M`,
-      change: '+18% so với tuần trước',
-      icon: 'wallet',
-      color: '#059669',
-      gradient: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-    },
-    {
-      label: 'Đơn mới',
-      value: stats.new_orders.toString(),
-      change: 'Chờ xác nhận',
-      icon: 'package',
-      color: '#d97706',
-      gradient: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
-    },
-    {
-      label: 'Đang giao',
-      value: stats.delivering_orders.toString(),
-      change: 'Đang trên đường',
-      icon: 'truck',
-      color: '#7c3aed',
-      gradient: 'linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)',
-    },
-    {
-      label: 'Đã giao',
-      value: stats.completed_orders.toString(),
-      change: 'Hoàn thành',
-      icon: 'check',
-      color: '#0891b2',
-      gradient: 'linear-gradient(135deg, #0891b2 0%, #22d3ee 100%)',
-    },
-  ] : null;
-
-  const revenueChartData = revenue.map((r, _i) => ({
+  const revenueChartData = revenue.map((r) => ({
     date: new Date(r.day).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
     revenue: Number(r.revenue),
     orders: Number(r.order_count),
@@ -244,88 +263,107 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="adm-dashboard">
-        <div className="adm-dashboard-toolbar">
-          <DateRangePicker />
-        </div>
-        <div className="adm-kpi-grid-v2">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="adm-card" style={{ height: 120 }}>
-              <div className="adm-skeleton" style={{ height: 60, width: 60, borderRadius: 12 }} />
-              <div style={{ flex: 1 }}>
-                <div className="adm-skeleton adm-skeleton-text" style={{ width: '60%' }} />
-                <div className="adm-skeleton adm-skeleton-title" style={{ width: '40%' }} />
-                <div className="adm-skeleton adm-skeleton-text" style={{ width: '80%' }} />
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="adm-loading-spinner" />
+      <div className="db-loading">
+        <div className="db-loading-spinner" />
+        <p>Đang tải dữ liệu...</p>
       </div>
     );
   }
 
   if (error && !stats) {
     return (
-      <div className="adm-error" style={{ margin: 20 }}>
-        <div className="adm-error-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-        <h3 className="adm-error-title">Không thể tải dữ liệu dashboard</h3>
-        <p className="adm-error-desc">{error}</p>
-        <button className="adm-error-retry" onClick={loadDashboard}>
-          Thử lại
-        </button>
+      <div className="db-error">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+        <h3>Không thể tải dữ liệu dashboard</h3>
+        <p>{error}</p>
+        <button onClick={loadDashboard} className="db-btn-primary">Thử lại</button>
       </div>
     );
   }
 
   return (
-    <div className="adm-dashboard">
-      {/* Toolbar */}
-      <div className="adm-dashboard-toolbar">
-        <DateRangePicker />
-      </div>
+    <div className="db-page">
+      <DashboardHeader />
 
-      {/* KPI Cards */}
-      <AdminKpiGrid stats={kpiStats} />
-
-      {/* Row 2: Revenue + Status Donut + Notifications */}
-      <div className="adm-dashboard-row-2">
-        <div className="adm-dashboard-revenue">
-          <div className="adm-card">
-            <RevenueLineChart data={revenueChartData} />
-          </div>
-        </div>
-        <div className="adm-dashboard-status">
-          <OrderStatusDonut stats={orderStats} />
-        </div>
-        <div className="adm-dashboard-notif">
-          <AdminNotifications notifications={notificationItems} />
-        </div>
-      </div>
-
-      {/* Row 3: Pending Orders + Right Sidebar */}
-      <div className="adm-dashboard-row-3">
-        <div className="adm-dashboard-orders">
-          <PendingOrdersTable
-            orders={pendingOrders}
-            total={pendingTotal}
-            page={pendingPage}
-            onPageChange={setPendingPage}
-            loading={pendingLoading}
+      {/* Stat Cards */}
+      <section className="db-section">
+        <div className="db-stat-grid">
+          <StatCard
+            label="Tổng đơn hàng"
+            value={stats?.today_orders?.toString() ?? '0'}
+            change="+15% so với tuần trước"
+            icon="shopping-bag"
+            gradient="linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)"
+          />
+          <StatCard
+            label="Doanh thu"
+            value={stats ? `${(Number(stats.today_revenue) / 1000000).toFixed(1)}M` : '0'}
+            change="+18% so với tuần trước"
+            icon="wallet"
+            gradient="linear-gradient(135deg, #059669 0%, #10b981 100%)"
+          />
+          <StatCard
+            label="Đơn mới"
+            value={stats?.new_orders?.toString() ?? '0'}
+            change="Chờ xác nhận"
+            icon="package"
+            gradient="linear-gradient(135deg, #d97706 0%, #f59e0b 100%)"
+          />
+          <StatCard
+            label="Đang giao"
+            value={stats?.delivering_orders?.toString() ?? '0'}
+            change="Đang trên đường"
+            icon="truck"
+            gradient="linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%)"
+          />
+          <StatCard
+            label="Đã giao"
+            value={stats?.completed_orders?.toString() ?? '0'}
+            change="Hoàn thành"
+            icon="check"
+            gradient="linear-gradient(135deg, #0891b2 0%, #22d3ee 100%)"
           />
         </div>
-        <div className="adm-dashboard-right-sidebar">
-          <NewOrdersCard orders={newOrderItems} />
-          <BestSellingProducts products={bestSellerCards} />
-          <LowStockCard />
+      </section>
+
+      {/* Charts Row */}
+      <section className="db-section">
+        <div className="db-charts-grid">
+          <div className="db-card db-card-chart">
+            <RevenueLineChart data={revenueChartData} />
+          </div>
+          <div className="db-card db-card-status">
+            <OrderStatusDonut stats={orderStats} />
+          </div>
+          <div className="db-card db-card-notif">
+            <AdminNotifications notifications={notificationItems} />
+          </div>
         </div>
-      </div>
+      </section>
+
+      {/* Bottom Row */}
+      <section className="db-section">
+        <div className="db-bottom-grid">
+          <div className="db-card db-card-orders">
+            <PendingOrdersTable
+              orders={pendingOrders}
+              total={pendingTotal}
+              page={pendingPage}
+              onPageChange={setPendingPage}
+              loading={pendingLoading}
+            />
+          </div>
+          <div className="db-card-stack">
+            <NewOrdersCard orders={newOrderItems} />
+            <BestSellingProducts products={bestSellerCards} />
+            <LowStockCard />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

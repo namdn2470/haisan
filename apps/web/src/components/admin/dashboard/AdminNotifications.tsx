@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Star,
   Bell,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface Notification {
@@ -33,9 +34,9 @@ const NOTIF_ICONS: Record<string, { icon: React.ReactNode; color: string; bg: st
     bg: '#f0fdf4',
   },
   ORDER_DELIVERED: {
-    icon: <Truck size={16} />,
-    color: '#7c3aed',
-    bg: '#faf5ff',
+    icon: <CheckCircle2 size={16} />,
+    color: '#059669',
+    bg: '#f0fdf4',
   },
   PRODUCT_LOW_STOCK: {
     icon: <AlertTriangle size={16} />,
@@ -47,6 +48,11 @@ const NOTIF_ICONS: Record<string, { icon: React.ReactNode; color: string; bg: st
     color: '#f59e0b',
     bg: '#fffbeb',
   },
+  info: {
+    icon: <Bell size={16} />,
+    color: '#0891b2',
+    bg: '#ecfeff',
+  },
   default: {
     icon: <Bell size={16} />,
     color: '#64748b',
@@ -54,76 +60,80 @@ const NOTIF_ICONS: Record<string, { icon: React.ReactNode; color: string; bg: st
   },
 };
 
+const getNotificationIcon = (type: string) => {
+  switch (type) {
+    case 'ORDER_NEW':
+    case 'order_created':
+      return ShoppingCart;
+    case 'ORDER_PAID':
+    case 'ORDER_DELIVERED':
+    case 'order_completed':
+      return CheckCircle2;
+    case 'ORDER_DELIVERING':
+    case 'delivery':
+      return Truck;
+    case 'PRODUCT_LOW_STOCK':
+      return AlertTriangle;
+    case 'REVIEW':
+      return Star;
+    default:
+      return Bell;
+  }
+};
+
 export default function AdminNotifications({ notifications }: AdminNotificationsProps) {
-  const items = notifications && notifications.length > 0 ? notifications : null;
+  const latestNotifications = notifications ? notifications.slice(0, 6) : [];
 
   return (
-    <div className="adm-card adm-notif-card">
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-      }}>
-        <h3 style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', margin: 0 }}>
-          Thông báo
-        </h3>
+    <div className="adm-notif-panel h-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="adm-notif-header">
+        <h2 className="adm-notif-title">Thông báo</h2>
         <Link
           href="/admin/notifications"
-          style={{
-            fontSize: 12,
-            color: '#0891b2',
-            textDecoration: 'none',
-          }}
+          className="adm-notif-view-all"
         >
           Xem tất cả
         </Link>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {!items ? (
-          <p style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', margin: '24px 0' }}>
-            Chưa có thông báo nào
-          </p>
-        ) : items.map((notif) => {
-          const style = NOTIF_ICONS[notif.type] || NOTIF_ICONS.default;
-          return (
-            <div key={notif.id} style={{
-              display: 'flex',
-              gap: 12,
-              alignItems: 'flex-start',
-            }}>
-              <div style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: style.bg,
-                color: style.color,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}>
-                {style.icon}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontSize: 13,
-                  color: '#334155',
-                  margin: 0,
-                  lineHeight: 1.4,
-                  wordBreak: 'break-word',
-                }}>
-                  {notif.message}
-                </p>
-                <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, display: 'block' }}>
-                  {notif.time}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {latestNotifications.length === 0 ? (
+        <div className="adm-notif-empty-state">
+          <Bell className="adm-notif-empty-icon" />
+          <p className="adm-notif-empty-title">Chưa có thông báo</p>
+          <p className="adm-notif-empty-desc">Thông báo mới sẽ xuất hiện tại đây.</p>
+        </div>
+      ) : (
+        <div className="adm-notif-list">
+          {latestNotifications.map((notif) => {
+            const style = NOTIF_ICONS[notif.type] || NOTIF_ICONS.default;
+            const IconComponent = getNotificationIcon(notif.type);
+
+            return (
+              <Link
+                key={notif.id}
+                href="/admin/notifications"
+                className="adm-notif-item-link"
+              >
+                <div
+                  className="adm-notif-icon"
+                  style={{ background: style.bg, color: style.color }}
+                >
+                  <IconComponent size={16} />
+                </div>
+
+                <div className="adm-notif-content">
+                  <p className="adm-notif-message">
+                    {notif.message}
+                  </p>
+                  <span className="adm-notif-time">
+                    {notif.time}
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

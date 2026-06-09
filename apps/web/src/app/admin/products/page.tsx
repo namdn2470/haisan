@@ -3,28 +3,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Search, Filter, Edit2, Trash2, Eye, EyeOff,
-  AlertTriangle, Package, Star, TrendingUp, X,
-  ChevronUp, ChevronDown, Upload, Check,
+  AlertTriangle, Package, Star, TrendingUp,
+  ChevronUp, ChevronDown,
 } from 'lucide-react';
 import { useToast, useConfirm } from '../layout';
 import {
   fetchProducts, fetchProductById, fetchCategories,
   createProduct, updateProduct, deleteProduct
 } from '@/lib/admin/api';
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface ProductImage {
-  id?: string;
-  imageUrl: string;
-  altText?: string;
-  isThumbnail?: boolean;
-  sortOrder?: number;
-}
+import ProductModal from '@/components/admin/ProductModal';
+import type { ProductImage, ProductFormData, Category } from '@/components/admin/ProductModal';
 
 interface Product {
   id: string;
@@ -47,36 +35,10 @@ interface Product {
   images: ProductImage[];
 }
 
-interface ProductFormData {
-  name: string;
-  slug: string;
-  categoryId: string;
-  shortDescription: string;
-  description: string;
-  basePrice: string;
-  oldPrice: string;
-  unit: string;
-  stockQuantity: string;
-  lowStockThreshold: string;
-  status: string;
-  isFeatured: boolean;
-  isBestSeller: boolean;
-  seoTitle: string;
-  seoDescription: string;
-  images: ProductImage[];
-}
-
 const STATUS_OPTIONS = [
   { value: 'ACTIVE', label: 'Đang bán' },
   { value: 'OUT_OF_STOCK', label: 'Hết hàng' },
   { value: 'INACTIVE', label: 'Tạm ẩn' },
-];
-
-const UNIT_OPTIONS = [
-  { value: 'kg', label: 'Kg' },
-  { value: 'con', label: 'Con' },
-  { value: 'hộp', label: 'Hộp' },
-  { value: 'combo', label: 'Combo' },
 ];
 
 const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
@@ -713,248 +675,25 @@ export default function ProductsPage() {
       </div>
 
       {/* Product Modal */}
-      {showModal && (
-        <div className="adm-modal-overlay" onClick={(e) => e.target === e.currentTarget && closeModal()}>
-          <div className="adm-modal adm-modal-lg">
-            <div className="adm-modal-header">
-              <h3>{editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới'}</h3>
-              <button className="adm-modal-close" onClick={closeModal}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="adm-modal-body">
-                <div className="adm-form-grid">
-                  {/* Left Column */}
-                  <div className="adm-form-column">
-                    <div className="adm-form-group">
-                      <label className="adm-form-label required">Tên sản phẩm</label>
-                      <input
-                        type="text"
-                        className="adm-form-input"
-                        placeholder="Nhập tên sản phẩm"
-                        value={formData.name}
-                        onChange={e => handleNameChange(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="adm-form-group">
-                      <label className="adm-form-label">Slug</label>
-                      <input
-                        type="text"
-                        className="adm-form-input"
-                        placeholder="duoc-tao-tu-dong"
-                        value={formData.slug}
-                        onChange={e => handleSlugChange(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="adm-form-group">
-                      <label className="adm-form-label required">Danh mục</label>
-                      <select
-                        className="adm-form-select"
-                        value={formData.categoryId}
-                        onChange={e => setFormData(prev => ({ ...prev, categoryId: e.target.value }))}
-                      >
-                        <option value="">Chọn danh mục</option>
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="adm-form-group">
-                      <label className="adm-form-label">Mô tả ngắn</label>
-                      <textarea
-                        className="adm-form-textarea"
-                        placeholder="Mô tả ngắn về sản phẩm..."
-                        rows={2}
-                        value={formData.shortDescription}
-                        onChange={e => setFormData(prev => ({ ...prev, shortDescription: e.target.value }))}
-                      />
-                    </div>
-
-                    <div className="adm-form-group">
-                      <label className="adm-form-label">Mô tả chi tiết</label>
-                      <textarea
-                        className="adm-form-textarea"
-                        placeholder="Mô tả chi tiết sản phẩm..."
-                        rows={4}
-                        value={formData.description}
-                        onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="adm-form-column">
-                    <div className="adm-form-row">
-                      <div className="adm-form-group">
-                        <label className="adm-form-label required">Giá bán</label>
-                        <input
-                          type="number"
-                          className="adm-form-input"
-                          placeholder="0"
-                          min="0"
-                          value={formData.basePrice}
-                          onChange={e => setFormData(prev => ({ ...prev, basePrice: e.target.value }))}
-                        />
-                      </div>
-                      <div className="adm-form-group">
-                        <label className="adm-form-label">Giá cũ</label>
-                        <input
-                          type="number"
-                          className="adm-form-input"
-                          placeholder="0"
-                          min="0"
-                          value={formData.oldPrice}
-                          onChange={e => setFormData(prev => ({ ...prev, oldPrice: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="adm-form-row">
-                      <div className="adm-form-group">
-                        <label className="adm-form-label">Đơn vị tính</label>
-                        <select
-                          className="adm-form-select"
-                          value={formData.unit}
-                          onChange={e => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-                        >
-                          {UNIT_OPTIONS.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="adm-form-group">
-                        <label className="adm-form-label">Trạng thái</label>
-                        <select
-                          className="adm-form-select"
-                          value={formData.status}
-                          onChange={e => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                        >
-                          {STATUS_OPTIONS.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="adm-form-row">
-                      <div className="adm-form-group">
-                        <label className="adm-form-label">Tồn kho</label>
-                        <input
-                          type="number"
-                          className="adm-form-input"
-                          placeholder="0"
-                          min="0"
-                          value={formData.stockQuantity}
-                          onChange={e => setFormData(prev => ({ ...prev, stockQuantity: e.target.value }))}
-                        />
-                      </div>
-                      <div className="adm-form-group">
-                        <label className="adm-form-label">Ngưỡng cảnh báo</label>
-                        <input
-                          type="number"
-                          className="adm-form-input"
-                          placeholder="10"
-                          min="0"
-                          value={formData.lowStockThreshold}
-                          onChange={e => setFormData(prev => ({ ...prev, lowStockThreshold: e.target.value }))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="adm-form-group">
-                      <label className="adm-form-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={formData.isFeatured}
-                          onChange={e => setFormData(prev => ({ ...prev, isFeatured: e.target.checked }))}
-                        />
-                        <span>Sản phẩm nổi bật</span>
-                      </label>
-                      <label className="adm-form-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={formData.isBestSeller}
-                          onChange={e => setFormData(prev => ({ ...prev, isBestSeller: e.target.checked }))}
-                        />
-                        <span>Sản phẩm bán chạy</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Image Upload */}
-                <div className="adm-form-section">
-                  <label className="adm-form-label">Hình ảnh sản phẩm</label>
-                  <div className="adm-image-upload-area">
-                    <div className="adm-image-grid">
-                      {formData.images.map((img, idx) => (
-                        <div key={idx} className={`adm-image-item ${img.isThumbnail ? 'thumbnail' : ''}`}>
-                          <img src={img.imageUrl} alt={`Ảnh ${idx + 1}`} />
-                          {img.isThumbnail && <span className="adm-image-badge">Chính</span>}
-                          <div className="adm-image-actions">
-                            {!img.isThumbnail && (
-                              <button type="button" onClick={() => setThumbnail(idx)} title="Đặt làm ảnh chính">
-                                <Check size={12} />
-                              </button>
-                            )}
-                            <button type="button" onClick={() => removeImage(idx)} title="Xóa">
-                              <X size={12} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                      <label className="adm-image-add">
-                        <input type="file" accept="image/*" multiple onChange={handleImageUpload} />
-                        <Upload size={24} />
-                        <span>Thêm ảnh</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SEO Section */}
-                <div className="adm-form-section">
-                  <label className="adm-form-label">SEO</label>
-                  <div className="adm-form-row">
-                    <div className="adm-form-group">
-                      <label className="adm-form-label-sm">SEO Title</label>
-                      <input
-                        type="text"
-                        className="adm-form-input"
-                        placeholder="Tiêu đề SEO"
-                        value={formData.seoTitle}
-                        onChange={e => setFormData(prev => ({ ...prev, seoTitle: e.target.value }))}
-                      />
-                    </div>
-                    <div className="adm-form-group">
-                      <label className="adm-form-label-sm">SEO Description</label>
-                      <textarea
-                        className="adm-form-textarea"
-                        placeholder="Mô tả SEO"
-                        rows={2}
-                        value={formData.seoDescription}
-                        onChange={e => setFormData(prev => ({ ...prev, seoDescription: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="adm-modal-footer">
-                <button type="button" className="adm-btn-secondary" onClick={closeModal}>
-                  Hủy
-                </button>
-                <button type="submit" className="adm-btn-primary" disabled={formLoading}>
-                  {formLoading ? 'Đang lưu...' : (editingProduct ? 'Lưu thay đổi' : 'Thêm sản phẩm')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ProductModal
+        isOpen={showModal}
+        editingProduct={editingProduct}
+        formData={formData}
+        categories={categories}
+        formLoading={formLoading}
+        onClose={closeModal}
+        onChange={(data) => setFormData(prev => ({ ...prev, ...data }))}
+        onNameChange={handleNameChange}
+        onSlugChange={handleSlugChange}
+        onImageUpload={(files) => {
+          if (!files) return;
+          const fakeEvent = { target: { files } } as unknown as React.ChangeEvent<HTMLInputElement>;
+          handleImageUpload(fakeEvent);
+        }}
+        onRemoveImage={removeImage}
+        onSetThumbnail={setThumbnail}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 }

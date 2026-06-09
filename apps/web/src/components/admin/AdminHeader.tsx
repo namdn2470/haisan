@@ -20,6 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/reviews': 'Quản lý đánh giá',
   '/admin/delivery': 'Quản lý giao hàng',
   '/admin/inventory': 'Quản lý kho hàng',
+  '/admin/notifications': 'Quản lý thông báo',
   '/admin/reports': 'Báo cáo',
   '/admin/config': 'Cấu hình',
   '/admin/settings': 'Cài đặt hệ thống',
@@ -135,7 +136,7 @@ export default function AdminHeader({ pathname, user, onToggle }: AdminHeaderPro
             <div className="adm-notif-dropdown">
               <div className="adm-notif-dropdown-header">
                 <span>Thông báo</span>
-                <Link href="/admin/dashboard" style={{ fontSize: 12, color: '#0891b2', textDecoration: 'none' }} onClick={() => setNotifOpen(false)}>
+                <Link href="/admin/notifications" style={{ fontSize: 12, color: '#0891b2', textDecoration: 'none' }} onClick={() => setNotifOpen(false)}>
                   Xem tất cả
                 </Link>
               </div>

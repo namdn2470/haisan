@@ -112,38 +112,22 @@ export default function PendingOrdersTable({
   ];
 
   return (
-    <div className="adm-card adm-pending-orders-card">
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-      }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 }}>
-          Đơn hàng chờ xử lý
-        </h3>
-        <Link
-          href="/admin/orders"
-          style={{
-            fontSize: 13,
-            color: '#0891b2',
-            textDecoration: 'none',
-          }}
-        >
-          Xem tất cả đơn hàng
-        </Link>
+    <div className="pot-wrap">
+      <div className="pot-header">
+        <h3 className="pot-title">Đơn hàng chờ xử lý</h3>
+        <Link href="/admin/orders" className="pot-link">Xem tất cả đơn hàng</Link>
       </div>
 
       {/* Tabs */}
-      <div className="adm-tabs">
+      <div className="pot-tabs">
         {tabs.map((tab) => (
           <button
             key={tab.label}
-            className={`adm-tab ${activeTab === tab.label ? 'active' : ''}`}
+            className={`pot-tab${activeTab === tab.label ? ' active' : ''}`}
             onClick={() => setActiveTab(tab.label)}
           >
             {tab.label}
-            <span className="adm-tab-badge">{tab.count}</span>
+            <span className="pot-tab-badge">{tab.count}</span>
           </button>
         ))}
       </div>
@@ -151,25 +135,25 @@ export default function PendingOrdersTable({
       {/* Table */}
       <div style={{ overflowX: 'auto' }}>
         {loading ? (
-          <div className="adm-loading-spinner" />
+          <div className="pot-loading">
+            <div className="pot-spinner" />
+          </div>
         ) : items.length === 0 ? (
-          <div className="adm-empty">
-            <div className="adm-empty-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
-                <rect x="9" y="3" width="6" height="4" rx="1" />
-              </svg>
-            </div>
-            <p className="adm-empty-title">Không có đơn hàng nào</p>
-            <p className="adm-empty-desc">Danh sách đơn hàng đang trống</p>
+          <div className="pot-empty">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+              <rect x="9" y="3" width="6" height="4" rx="1" />
+            </svg>
+            <p className="pot-empty-title">Không có đơn hàng nào</p>
+            <p className="pot-empty-desc">Danh sách đơn hàng đang trống</p>
           </div>
         ) : (
-          <table className="adm-table">
+          <table className="pot-table">
             <thead>
               <tr>
                 <th>Mã đơn</th>
                 <th>Khách hàng</th>
-                <th>SĐT</th>
+                <th>Điện thoại</th>
                 <th>Tổng tiền</th>
                 <th>Thanh toán</th>
                 <th>Trạng thái</th>
@@ -188,58 +172,52 @@ export default function PendingOrdersTable({
                 const createdAt = order.createdAt || order.created_at;
 
                 return (
-                  <tr key={order.id}>
+                  <tr key={order.id} className="pot-row">
                     <td>
-                      <span style={{ fontWeight: 600, color: '#0891b2' }}>
-                        {orderCode}
-                      </span>
+                      <span className="pot-order-code">{orderCode}</span>
                     </td>
-                    <td>{customerName}</td>
-                    <td>{customerPhone}</td>
+                    <td className="pot-cell">{customerName}</td>
+                    <td className="pot-cell">{customerPhone}</td>
                     <td>
-                      <span style={{ fontWeight: 600, color: '#059669' }}>
-                        {formatCurrency(amount)}
-                      </span>
+                      <span className="pot-amount">{formatCurrency(amount)}</span>
                     </td>
                     <td>
-                      <span className={`adm-badge adm-badge-${PAYMENT_COLORS[paymentMethod] || 'gray'}`}>
+                      <span className={`pot-badge pot-badge-${PAYMENT_COLORS[paymentMethod] || 'gray'}`}>
                         {PAYMENT_LABELS[paymentMethod] || paymentMethod}
                       </span>
                     </td>
                     <td>
-                      <span className={`adm-badge adm-badge-${STATUS_COLORS[orderStatus] || 'gray'}`}>
+                      <span className={`pot-badge pot-badge-${STATUS_COLORS[orderStatus] || 'gray'}`}>
                         {STATUS_LABELS[orderStatus] || orderStatus}
                       </span>
                     </td>
-                    <td style={{ fontSize: 13, color: '#64748b' }}>
-                      {formatDate(createdAt)}
-                    </td>
+                    <td className="pot-time">{formatDate(createdAt)}</td>
                     <td>
-                      <div className="adm-action-menu">
+                      <div className="pot-actions">
                         <button
-                          className="adm-action-trigger"
+                          className="pot-action-trigger"
                           onClick={() => setOpenMenuId(openMenuId === order.id ? null : order.id)}
                         >
-                          <MoreHorizontal size={16} />
+                          <MoreHorizontal size={15} />
                         </button>
                         {openMenuId === order.id && (
-                          <div className="adm-action-dropdown">
+                          <div className="pot-dropdown">
                             <Link
                               href={`/admin/orders/${order.id}`}
-                              className="adm-action-item"
+                              className="pot-dropdown-item"
                               onClick={() => setOpenMenuId(null)}
                             >
-                              <Eye size={14} />
+                              <Eye size={13} />
                               Xem chi tiết
                             </Link>
                             {orderStatus === 'NEW' && (
                               <>
-                                <button className="adm-action-item">
-                                  <Check size={14} />
+                                <button className="pot-dropdown-item pot-dropdown-confirm">
+                                  <Check size={13} />
                                   Xác nhận đơn
                                 </button>
-                                <button className="adm-action-item" style={{ color: '#ef4444' }}>
-                                  <X size={14} />
+                                <button className="pot-dropdown-item pot-dropdown-cancel">
+                                  <X size={13} />
                                   Hủy đơn
                                 </button>
                               </>
@@ -258,13 +236,13 @@ export default function PendingOrdersTable({
 
       {/* Pagination */}
       {total > 0 && (
-        <div className="adm-pagination">
-          <span className="adm-pagination-info">
+        <div className="pot-pagination">
+          <span className="pot-pagination-info">
             Hiển thị {startItem} - {endItem} trong {total} đơn hàng
           </span>
-          <div className="adm-pagination-buttons">
+          <div className="pot-pagination-btns">
             <button
-              className="adm-pagination-btn"
+              className="pot-pagination-btn"
               disabled={page <= 1}
               onClick={() => onPageChange?.(page - 1)}
             >
@@ -275,16 +253,16 @@ export default function PendingOrdersTable({
               return (
                 <button
                   key={pageNum}
-                  className={`adm-pagination-btn ${page === pageNum ? 'active' : ''}`}
+                  className={`pot-pagination-btn${page === pageNum ? ' active' : ''}`}
                   onClick={() => onPageChange?.(pageNum)}
                 >
                   {pageNum}
                 </button>
               );
             })}
-            {totalPages > 5 && <span className="adm-pagination-ellipsis">...</span>}
+            {totalPages > 5 && <span className="pot-pagination-ellipsis">...</span>}
             <button
-              className="adm-pagination-btn"
+              className="pot-pagination-btn"
               disabled={page >= totalPages}
               onClick={() => onPageChange?.(page + 1)}
             >

@@ -6,13 +6,14 @@ import {
   Truck, ShieldCheck, Scale, ChevronRight,
   ShoppingCart, Phone,
   Leaf,
-  Flame, Headphones, Package, Undo2, Zap, Percent, Mail,
+  Flame, Headphones, Package, Undo2,
 } from 'lucide-react';
 import { img } from '@/lib/api';
 import { money } from '@/lib/money';
 import { useCart } from '@/lib/cart-store';
 import ProductCard from '@/components/shared/ProductCard';
 import SiteShell from '@/components/shared/SiteShell';
+import HomePromoCards from '@/components/home/HomePromoCards';
 
 export type HomeCategory = { id: string; name: string; imageUrl?: string; slug: string };
 export type HomeProduct = {
@@ -41,7 +42,7 @@ export default function HomeClient({ categories, products, banners }: HomeClient
     <SiteShell>
       <HeroSection />
       <CategoryStrip categories={categories} />
-      <PromoBanners banners={banners} />
+      <HomePromoCards banners={banners} />
       <BuyTogetherSection products={products} />
       <BestSellerSection products={products} />
       <CommitmentBar />
@@ -50,68 +51,54 @@ export default function HomeClient({ categories, products, banners }: HomeClient
 }
 
 /* ============================================
-   HERO SECTION
+   HERO SECTION — Premium Redesign
    ============================================ */
 function HeroSection() {
   return (
     <section className="hs-hero-wrap">
       <div className="hs-container">
-        <div className="hs-hero">
-          <HeroContent />
-          <HeroImage />
+        <div className="hs-hero-card">
+          <div className="hs-hero-left">
+            <span className="hs-hero-label">HẢI SẢN BIỂN XANH</span>
+            <h1 className="hs-hero-title">
+              HẢI SẢN <span className="hs-hero-title-highlight">TƯƠI SỐNG</span>
+            </h1>
+            <p className="hs-hero-sub">GIAO NHANH TRONG NGÀY</p>
+            <p className="hs-hero-desc">
+              Hải sản tươi mỗi ngày, giao nhanh trong ngày, chất lượng tin cậy tại TP.HCM.
+            </p>
+            <HeroBenefits />
+            <HeroActions />
+          </div>
+          <div className="hs-hero-right">
+            <div className="hs-hero-image">
+              <img
+                src="https://images.pexels.com/photos/16737158/pexels-photo-16737158.jpeg?auto=compress&cs=tinysrgb&w=1600"
+                alt="Hải sản tươi sống - tôm, cua, ghẹ, sò"
+                width={1862}
+                height={845}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function HeroContent() {
-  return (
-    <div className="hs-hero-left">
-      <HeroBadge />
-
-      <h1 className="hs-hero-title">
-        HẢI SẢN TƯƠI SỐNG
-      </h1>
-      <p className="hs-hero-sub">
-        GIAO NHANH TRONG NGÀY
-      </p>
-
-      <HeroBenefits />
-
-      <HeroActions />
-    </div>
-  );
-}
-
-function HeroBadge() {
-  return (
-    <div className="hs-hero-badge">
-      <span className="hs-hero-badge-icon">
-        <svg width="36" height="36" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4 20c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-          <path d="M4 25c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4"/>
-          <path d="M16 8l-3 7h6l-3-7z" fill="currentColor"/>
-        </svg>
-      </span>
-      <span>HẢI SẢN BIỂN XANH</span>
-    </div>
-  );
-}
-
 function HeroBenefits() {
   const benefits = [
-    { icon: <Leaf size={17} />, title: 'TƯƠI SỐNG', sub: 'Mỗi ngày' },
-    { icon: <Truck size={17} />, title: 'GIAO NHANH', sub: '2h tại TP.HCM' },
-    { icon: <ShieldCheck size={17} />, title: 'ĐỔI TRẢ', sub: 'Nếu không tươi' },
-    { icon: <Scale size={17} />, title: 'CÂN ĐÚNG', sub: 'Giá rõ ràng' },
+    { icon: <Leaf size={18} />, title: 'Tươi sống', sub: 'Mỗi ngày' },
+    { icon: <Truck size={18} />, title: 'Giao nhanh', sub: '2h tại TP.HCM' },
+    { icon: <ShieldCheck size={18} />, title: 'Đổi trả', sub: 'Nếu không tươi' },
+    { icon: <Scale size={18} />, title: 'Giá hợp lý', sub: 'Minh bạch, rõ ràng' },
   ];
   return (
-    <div className="hs-hero-commits">
+    <div className="hs-hero-benefits">
       {benefits.map((b, i) => (
-        <div className="hs-hero-commit" key={i}>
-          <div className="hs-hero-commit-icon">{b.icon}</div>
-          <div className="hs-hero-commit-text">
+        <div className="hs-hero-benefit" key={i}>
+          <div className="hs-hero-benefit-icon">{b.icon}</div>
+          <div className="hs-hero-benefit-text">
             <b>{b.title}</b>
             <small>{b.sub}</small>
           </div>
@@ -124,25 +111,12 @@ function HeroBenefits() {
 function HeroActions() {
   return (
     <div className="hs-hero-ctas">
-      <Link href="/products" className="hs-btn-primary">
+      <Link href="/products" className="hs-hero-btn-primary">
         <ShoppingCart size={18} /> ĐẶT HÀNG NGAY
       </Link>
-      <Link href="tel:0901234567" className="hs-btn-outline">
-        <Phone size={18} /> GỌI NGAY
+      <Link href="tel:0901234567" className="hs-hero-btn-outline">
+        <Phone size={18} /> GỌI NGAY 0901 234 567
       </Link>
-    </div>
-  );
-}
-
-function HeroImage() {
-  return (
-    <div className="hs-hero-center">
-      <img
-        src="https://images.pexels.com/photos/16737158/pexels-photo-16737158.jpeg?auto=compress&cs=tinysrgb&w=1600"
-        alt="Hải sản tươi sống - tôm, cua, ghẹ, sò, chanh"
-        width={1862}
-        height={845}
-      />
     </div>
   );
 }
@@ -167,44 +141,6 @@ function CategoryStrip({ categories }: { categories: HomeCategory[] }) {
                 {cat.name === 'Combo hot' && <span className="hs-cat-badge">HOT</span>}
               </div>
               <span>{cat.name}</span>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ============================================
-   PROMO BANNERS (4 cards)
-   ============================================ */
-function PromoBanners({ banners }: { banners: HomeBanner[] }) {
-  const iconStyles = [
-    { icon: <Flame size={24} />, bg: 'hs-promo-red' },
-    { icon: <Zap size={24} />, bg: 'hs-promo-green' },
-    { icon: <Percent size={24} />, bg: 'hs-promo-orange' },
-    { icon: <Mail size={24} />, bg: 'hs-promo-blue' },
-  ];
-  const displayBanners = banners.slice(0, 4).map((banner, index) => ({
-    ...iconStyles[index % iconStyles.length],
-    title: banner.title,
-    desc: banner.subtitle || '',
-    href: banner.linkUrl || banner.link || '/products',
-  }));
-
-  if (displayBanners.length === 0) return null;
-
-  return (
-    <section className="hs-promo-section">
-      <div className="hs-container">
-        <div className="hs-promo-grid">
-          {displayBanners.map((b, i) => (
-            <Link key={i} href={b.href} className={`hs-promo-card ${b.bg}`}>
-              <div className="hs-promo-icon">{b.icon}</div>
-              <div className="hs-promo-info">
-                <b>{b.title}</b>
-                <span>{b.desc}</span>
-              </div>
             </Link>
           ))}
         </div>
