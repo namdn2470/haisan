@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, Req } from '@ne
 import { PostsService } from './posts.service';
 import { Public } from '../../common/public.decorator';
 import { ADMIN_ROLES, isAdminRole, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Roles(...ADMIN_ROLES)
 @Controller('posts')
@@ -10,7 +11,7 @@ export class PostsController {
 
   @Public()
   @Get()
-  findAll(
+  async findAll(
     @Query('search') search?: string,
     @Query('status') status?: string,
     @Query('page') page?: string,
@@ -18,38 +19,44 @@ export class PostsController {
     @Req() req?: any,
   ) {
     const admin = isAdminRole(req?.user?.role);
-    return this.service.findAll({
+    const result = await this.service.findAll({
       search: admin ? search : undefined,
       status: admin ? status : 'PUBLISHED',
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 10,
       publicOnly: !admin,
     });
+    return apiResponse(result, 'Lấy danh sách bài viết thành công');
   }
 
   @Public()
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) {
-    return this.service.findBySlug(slug, true);
+  async findBySlug(@Param('slug') slug: string) {
+    const result = await this.service.findBySlug(slug, true);
+    return apiResponse(result, 'Lấy bài viết thành công');
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const result = await this.service.findOne(id);
+    return apiResponse(result, 'Lấy chi tiết bài viết thành công');
   }
 
   @Post()
-  create(@Body() dto: any) {
-    return this.service.create(dto);
+  async create(@Body() dto: any) {
+    const result = await this.service.create(dto);
+    return apiResponse(result, 'Tạo bài viết thành công');
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.service.update(id, dto);
+  async update(@Param('id') id: string, @Body() dto: any) {
+    const result = await this.service.update(id, dto);
+    return apiResponse(result, 'Cập nhật bài viết thành công');
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  async remove(@Param('id') id: string) {
+    const result = await this.service.remove(id);
+    return apiResponse(result, 'Xóa bài viết thành công');
   }
 }

@@ -6,6 +6,19 @@ import {
 } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect } from 'react';
 
+function generateSlug(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 export interface ProductImage {
   id?: string;
   imageUrl: string;
@@ -53,6 +66,8 @@ interface ProductModalProps {
   onRemoveImage: (index: number) => void;
   onSetThumbnail: (index: number) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onCreateCategory?: (name: string) => Promise<void>;
+  creatingCategory?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -228,6 +243,135 @@ function ImageUploadZone({
   );
 }
 
+// ─── Inline Add Category ──────────────────────────────────────────────────────
+interface AddCategoryInlineProps {
+  onCreate: (name: string) => Promise<void>;
+  creating: boolean;
+}
+
+function AddCategoryInline({ onCreate, creating: _creating }: AddCategoryInlineProps) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpen = () => {
+    setOpen(true);
+    setName('');
+    setSlug('');
+    setError('');
+    setSuccess(false);
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const handleClose = () => {
+    if (!saving) {
+      setOpen(false);
+      setName('');
+      setSlug('');
+      setError('');
+      setSuccess(false);
+    }
+  };
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    setSlug(generateSlug(val));
+    setError('');
+    setSuccess(false);
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      setError('Vui lòng nhập tên danh mục');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await onCreate(name.trim());
+      setSuccess(true);
+      setName('');
+      setSlug('');
+      setOpen(false);
+    } catch (err: any) {
+      setError(err.message || 'Không thể tạo danh mục');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="pm-add-cat-wrap">
+      {!open ? (
+        <button
+          type="button"
+          className="pm-add-cat-trigger"
+          onClick={handleOpen}
+        >
+          <Plus size={13} />
+          Thêm danh mục mới
+        </button>
+      ) : (
+        <div className="pm-add-cat-form">
+          <div className="pm-add-cat-input-row">
+            <input
+              ref={inputRef}
+              type="text"
+              className={`pm-input pm-add-cat-name-input ${error ? 'pm-input--error' : ''}`}
+              placeholder="VD: Hải sản cấp đông"
+              value={name}
+              onChange={e => handleNameChange(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') handleClose();
+              }}
+              disabled={saving}
+            />
+            <button
+              type="button"
+              className="pm-btn pm-btn--sm pm-btn--primary"
+              onClick={handleSave}
+              disabled={saving || !name.trim()}
+            >
+              {saving ? <Loader2 size={13} className="pm-spin" /> : <Check size={13} />}
+              Lưu
+            </button>
+            <button
+              type="button"
+              className="pm-btn pm-btn--sm pm-btn--ghost"
+              onClick={handleClose}
+              disabled={saving}
+            >
+              <X size={13} />
+            </button>
+          </div>
+          {slug && (
+            <div className="pm-add-cat-slug-preview">
+              Slug: <code>/danh-muc/{slug}</code>
+            </div>
+          )}
+          {error && (
+            <div className="pm-field__error">
+              <AlertCircle size={12} />
+              <span>{error}</span>
+            </div>
+          )}
+          {success && (
+            <div className="pm-add-cat-success">
+              <Check size={12} />
+              Đã thêm danh mục mới
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Modal ───────────────────────────────────────────────────────────────
 export default function ProductModal({
   isOpen,
@@ -243,6 +387,8 @@ export default function ProductModal({
   onRemoveImage,
   onSetThumbnail,
   onSubmit,
+  onCreateCategory,
+  creatingCategory,
 }: ProductModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -396,6 +542,14 @@ export default function ProductModal({
                       <AlertCircle size={13} />
                       <span>{categoryError}</span>
                     </div>
+                  )}
+
+                  {/* Inline add category */}
+                  {onCreateCategory && (
+                    <AddCategoryInline
+                      onCreate={onCreateCategory}
+                      creating={creatingCategory ?? false}
+                    />
                   )}
                 </div>
 

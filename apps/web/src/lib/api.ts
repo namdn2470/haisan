@@ -34,11 +34,13 @@ export type AuthSession = {
   expiresAt: number;
 };
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || '';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || 'http://localhost:3001';
 
-export function getApiBaseUrl() {
+export function getApiBaseUrl(): string {
   if (typeof window === 'undefined') return API_BASE_URL;
-  return localStorage.getItem('api_base') || API_BASE_URL;
+  const stored = localStorage.getItem('api_base');
+  if (stored && stored.trim()) return stored.trim();
+  return API_BASE_URL;
 }
 
 function decodeJwtExpiry(token: string): number | null {

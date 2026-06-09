@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Get, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/public.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Controller('auth')
 export class AuthController {
@@ -20,6 +21,7 @@ export class AuthController {
 
   @Get('me')
   me(@Req() req: any) {
-    return this.auth.me(req.user.sub);
+    const result = this.auth.me(req.user.sub);
+    return apiResponse(result, 'Lấy thông tin người dùng thành công');
   }
 }

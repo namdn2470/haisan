@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, Req } from '@ne
 import { ProductsService } from './products.service';
 import { Public } from '../../common/public.decorator';
 import { ADMIN_ROLES, isAdminRole, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Roles(...ADMIN_ROLES)
 @Controller('products')
@@ -10,7 +11,7 @@ export class ProductsController {
 
   @Public()
   @Get()
-  findAll(
+  async findAll(
     @Query('category') category?: string,
     @Query('search') search?: string,
     @Query('status') status?: string,
@@ -23,7 +24,7 @@ export class ProductsController {
     @Req() req?: any,
   ) {
     const admin = isAdminRole(req?.user?.role);
-    return this.service.findAll({
+    const result = await this.service.findAll({
       category,
       search,
       status,
@@ -35,37 +36,44 @@ export class ProductsController {
       all: admin && all === 'true',
       publicOnly: !admin,
     });
+    return apiResponse(result, 'Lấy danh sách sản phẩm thành công');
   }
 
   @Public()
   @Get('slug/:slug')
-  findBySlug(@Param('slug') slug: string) {
-    return this.service.findBySlug(slug, true);
+  async findBySlug(@Param('slug') slug: string) {
+    const result = await this.service.findBySlug(slug, true);
+    return apiResponse(result, 'Lấy sản phẩm thành công');
   }
 
   @Public()
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const result = await this.service.findOne(id);
+    return apiResponse(result, 'Lấy chi tiết sản phẩm thành công');
   }
 
   @Post()
-  create(@Body() dto: any) {
-    return this.service.create(dto);
+  async create(@Body() dto: any) {
+    const result = await this.service.create(dto);
+    return apiResponse(result, 'Tạo sản phẩm thành công');
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.service.update(id, dto);
+  async update(@Param('id') id: string, @Body() dto: any) {
+    const result = await this.service.update(id, dto);
+    return apiResponse(result, 'Cập nhật sản phẩm thành công');
   }
 
   @Put(':id/images')
-  updateImages(@Param('id') id: string, @Body() dto: { images: Array<{ imageUrl: string; isThumbnail?: boolean }> }) {
-    return this.service.updateImages(id, dto.images);
+  async updateImages(@Param('id') id: string, @Body() dto: { images: Array<{ imageUrl: string; isThumbnail?: boolean }> }) {
+    const result = await this.service.updateImages(id, dto.images);
+    return apiResponse(result, 'Cập nhật hình ảnh sản phẩm thành công');
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  async remove(@Param('id') id: string) {
+    const result = await this.service.remove(id);
+    return apiResponse(result, 'Xóa sản phẩm thành công');
   }
 }

@@ -200,10 +200,10 @@ export default function CustomersPage() {
         fetchCustomerById(customerId),
         fetchCustomerOrders(customerId),
       ]);
-      const data = customerRes.data;
+      const data = customerRes;
       setDetailCustomer({
         ...data,
-        orders: ordersRes.data || [],
+        orders: Array.isArray(ordersRes) ? ordersRes : [],
         totalOrders: data._count?.orders || 0,
         totalSpent: data.totalSpent || 0,
       });

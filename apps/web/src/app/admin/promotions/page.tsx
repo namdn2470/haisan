@@ -32,7 +32,7 @@ interface Promotion {
 }
 
 type ModalMode = 'create' | 'edit';
-type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
+type DiscountType = 'PERCENT' | 'FIXED_AMOUNT' | 'FREE_SHIPPING';
 
 interface FormData {
   code: string;
@@ -49,8 +49,9 @@ interface FormData {
 }
 
 const DISCOUNT_TYPES: { value: DiscountType; label: string }[] = [
-  { value: 'PERCENTAGE', label: 'Phần trăm (%)' },
+  { value: 'PERCENT', label: 'Phần trăm (%)' },
   { value: 'FIXED_AMOUNT', label: 'Giảm tiền cố định (VNĐ)' },
+  { value: 'FREE_SHIPPING', label: 'Miễn phí vận chuyển' },
 ];
 
 function formatCurrency(amount: number): string {
@@ -84,7 +85,7 @@ function getStatus(p: Promotion): 'ACTIVE' | 'INACTIVE' | 'EXPIRED' {
 }
 
 function getDiscountDisplay(p: Promotion): { text: string; sub?: string } {
-  if (p.discountType === 'PERCENTAGE') {
+  if (p.discountType === 'PERCENT' || p.discountType === 'PERCENTAGE') {
     const sub = (p.maxDiscountAmount || 0) > 0
       ? `Tối đa ${formatCurrency(Number(p.maxDiscountAmount))}`
       : undefined;
@@ -114,7 +115,7 @@ function emptyForm(): FormData {
     code: '',
     name: '',
     description: '',
-    discountType: 'PERCENTAGE',
+    discountType: 'PERCENT',
     discountValue: '',
     minOrderAmount: '',
     maxDiscountAmount: '',
@@ -126,11 +127,12 @@ function emptyForm(): FormData {
 }
 
 function promotionToForm(p: Promotion): FormData {
+  const discountType = (p.discountType === 'PERCENTAGE' ? 'PERCENT' : p.discountType) as DiscountType;
   return {
     code: p.code,
     name: p.name || '',
     description: p.description || '',
-    discountType: p.discountType as DiscountType,
+    discountType,
     discountValue: String(p.discountValue),
     minOrderAmount: p.minOrderAmount ? String(p.minOrderAmount) : '',
     maxDiscountAmount: p.maxDiscountAmount ? String(p.maxDiscountAmount) : '',
@@ -238,7 +240,7 @@ export default function PromotionsPage() {
     if (!form.discountValue || isNaN(Number(form.discountValue)) || Number(form.discountValue) <= 0) {
       errors.discountValue = 'Giá trị giảm phải lớn hơn 0';
     }
-    if (form.discountType === 'PERCENTAGE' && Number(form.discountValue) > 100) {
+    if (form.discountType === 'PERCENT' && Number(form.discountValue) > 100) {
       errors.discountValue = 'Phần trăm giảm không được vượt quá 100%';
     }
     if (!form.startAt) errors.startAt = 'Ngày bắt đầu là bắt buộc';
@@ -442,7 +444,7 @@ export default function PromotionsPage() {
                     const usagePct = usageLimit > 0
                       ? Math.min(100, Math.round((usedCount / usageLimit) * 100))
                       : 0;
-                    const discountColor = promotion.discountType === 'PERCENTAGE' ? '#7c3aed' : '#dc2626';
+                    const discountColor = promotion.discountType === 'PERCENT' || promotion.discountType === 'PERCENTAGE' ? '#7c3aed' : '#dc2626';
 
                     return (
                       <tr key={promotion.id}>
@@ -659,16 +661,16 @@ export default function PromotionsPage() {
                     </div>
                     <div className="adm-form-group">
                       <label className="adm-form-label required">
-                        {form.discountType === 'PERCENTAGE' ? 'Phần trăm giảm (%)' : 'Số tiền giảm (VNĐ)'}
+                        {form.discountType === 'PERCENT' ? 'Phần trăm giảm (%)' : form.discountType === 'FIXED_AMOUNT' ? 'Số tiền giảm (VNĐ)' : 'Giá trị giảm'}
                       </label>
                       <input
                         type="number"
                         className={`adm-input ${formErrors.discountValue ? 'adm-input-error' : ''}`}
                         value={form.discountValue}
                         onChange={e => setForm(f => ({ ...f, discountValue: e.target.value }))}
-                        placeholder={form.discountType === 'PERCENTAGE' ? '10' : '50000'}
+                        placeholder={form.discountType === 'PERCENT' ? '10' : '50000'}
                         min={0}
-                        step={form.discountType === 'PERCENTAGE' ? 1 : 1000}
+                        step={form.discountType === 'PERCENT' ? 1 : 1000}
                       />
                       {formErrors.discountValue && <small className="adm-form-error">{formErrors.discountValue}</small>}
                     </div>
@@ -686,7 +688,7 @@ export default function PromotionsPage() {
                         min={0}
                       />
                     </div>
-                    {form.discountType === 'PERCENTAGE' && (
+                    {form.discountType === 'PERCENT' && (
                       <div className="adm-form-group">
                         <label className="adm-form-label">Giảm tối đa (VNĐ)</label>
                         <input

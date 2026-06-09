@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Req } from '@nestjs/co
 import { CategoriesService } from './categories.service';
 import { Public } from '../../common/public.decorator';
 import { ADMIN_ROLES, isAdminRole, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Roles(...ADMIN_ROLES)
 @Controller('categories')
@@ -10,28 +11,33 @@ export class CategoriesController {
 
   @Public()
   @Get()
-  findAll(@Req() req: any) {
-    return this.service.findAll({ includeInactive: isAdminRole(req.user?.role) });
+  async findAll(@Req() req: any) {
+    const result = await this.service.findAll({ includeInactive: isAdminRole(req.user?.role) });
+    return apiResponse(result, 'Lấy danh sách danh mục thành công');
   }
 
   @Public()
   @Get(':id')
-  findOne(@Param('id') id: string, @Req() req: any) {
-    return this.service.findOne(id, { includeInactive: isAdminRole(req.user?.role) });
+  async findOne(@Param('id') id: string, @Req() req: any) {
+    const result = await this.service.findOne(id, { includeInactive: isAdminRole(req.user?.role) });
+    return apiResponse(result, 'Lấy chi tiết danh mục thành công');
   }
 
   @Post()
-  create(@Body() dto: any) {
-    return this.service.create(dto);
+  async create(@Body() dto: any) {
+    const result = await this.service.create(dto);
+    return apiResponse(result, 'Tạo danh mục thành công');
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: any) {
-    return this.service.update(id, dto);
+  async update(@Param('id') id: string, @Body() dto: any) {
+    const result = await this.service.update(id, dto);
+    return apiResponse(result, 'Cập nhật danh mục thành công');
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  async remove(@Param('id') id: string) {
+    const result = await this.service.remove(id);
+    return apiResponse(result, 'Xóa danh mục thành công');
   }
 }

@@ -3,7 +3,7 @@
   "version": "3.0.0",
   "private": true,
   "scripts": {
-    "dev": "turbo dev --filter=@hsbx/web",
+    "dev": "turbo dev --filter=@hsbx/web --filter=@hsbx/api",
     "dev:web": "turbo dev --filter=@hsbx/web",
     "dev:api": "turbo dev --filter=@hsbx/api",
     "dev:full": "turbo dev --filter=@hsbx/web --filter=@hsbx/api",
@@ -14,7 +14,10 @@
     "db:migrate": "pnpm --filter @hsbx/db run db:migrate",
     "db:seed": "pnpm --filter @hsbx/db run db:seed",
     "db:studio": "pnpm --filter @hsbx/db run db:studio",
-    "clean": "turbo clean && rm -rf node_modules"
+    "clean": "turbo clean && rm -rf node_modules",
+    "kill:web": "bash scripts/kill-web-port.sh",
+    "clean:web": "rm -rf apps/web/.next .turbo",
+    "dev:clean": "pnpm run kill:web && pnpm run clean:web && pnpm run dev"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

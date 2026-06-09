@@ -190,7 +190,7 @@ export default function OrdersPage() {
         fetchOrderById(orderId),
         fetchOrderHistory(orderId),
       ]);
-      const order = { ...orderRes.data, statusHistory: history };
+      const order = { ...orderRes, statusHistory: history };
       setSelectedOrder(order);
       setAdminNote(order.adminNote || '');
     } catch {

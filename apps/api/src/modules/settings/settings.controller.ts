@@ -9,6 +9,8 @@ import {
 import { SettingsService } from './settings.service';
 import { Public } from '../../common/public.decorator';
 import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
+import { UpdateStoreSettingsDto } from './dto/update-settings.dto';
 
 @Roles(...ADMIN_ROLES)
 @Controller('settings')
@@ -17,18 +19,21 @@ export class SettingsController {
 
   @Get()
   async getSettings() {
-    return this.settingsService.getSettings();
+    const settings = await this.settingsService.getSettings();
+    return apiResponse(settings, 'Lấy cài đặt thành công');
   }
 
   @Put()
   @HttpCode(HttpStatus.OK)
-  async updateSettings(@Body() data: any) {
-    return this.settingsService.updateSettings(data);
+  async updateSettings(@Body() dto: UpdateStoreSettingsDto) {
+    const settings = await this.settingsService.updateSettings(dto);
+    return apiResponse(settings, 'Lưu cài đặt thành công');
   }
 
   @Public()
   @Get('public')
   async getPublicSettings() {
-    return this.settingsService.getPublicSettings();
+    const settings = await this.settingsService.getPublicSettings();
+    return apiResponse(settings, 'Lấy cài đặt công khai thành công');
   }
 }

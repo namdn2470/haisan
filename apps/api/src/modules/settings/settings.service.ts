@@ -6,6 +6,11 @@ import { Prisma } from '@hsbx/db';
 export class SettingsService {
   constructor(private prisma: PrismaService) {}
 
+  private emptyToNull(value: string | null | undefined): string | null {
+    if (value === '' || value === undefined) return null;
+    return value;
+  }
+
   async getSettings() {
     let settings = await this.prisma.storeSettings.findFirst();
 
@@ -21,13 +26,24 @@ export class SettingsService {
     return settings;
   }
 
-  async updateSettings(data: Prisma.StoreSettingsUpdateInput) {
-    const settings = await this.prisma.storeSettings.findFirst();
+  async updateSettings(data: Partial<Prisma.StoreSettingsUpdateInput>) {
+    const sanitized: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(data)) {
+      if (value === '' || value === undefined) {
+        sanitized[key] = null;
+      } else {
+        sanitized[key] = value;
+      }
+    }
+
+    let settings = await this.prisma.storeSettings.findFirst();
 
     if (!settings) {
       return this.prisma.storeSettings.create({
         data: {
-          ...data,
+          storeName: (sanitized.storeName as string) || 'Hải Sản Biển Xanh',
+          ...sanitized,
           isActive: true,
         } as Prisma.StoreSettingsCreateInput,
       });
@@ -35,7 +51,7 @@ export class SettingsService {
 
     return this.prisma.storeSettings.update({
       where: { id: settings.id },
-      data,
+      data: sanitized,
     });
   }
 
@@ -44,15 +60,25 @@ export class SettingsService {
       where: { isActive: true },
       select: {
         storeName: true,
+        storeDescription: true,
         logo: true,
         favicon: true,
+        phone: true,
         hotline: true,
         email: true,
         address: true,
+        ward: true,
+        district: true,
+        city: true,
+        mapUrl: true,
         openingHours: true,
+        deliveryPolicy: true,
+        returnPolicy: true,
         facebookUrl: true,
         zaloUrl: true,
         tiktokUrl: true,
+        youtubeUrl: true,
+        instagramUrl: true,
         defaultShippingFee: true,
         defaultShippingZone: true,
         seoTitle: true,

@@ -323,6 +323,6 @@ export class OrdersService {
       where: { orderId: id },
       orderBy: { createdAt: 'desc' },
     });
-    return { data };
+    return data;
   }
 }

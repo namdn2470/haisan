@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Param, Body, Query, Req } from '@ne
 import { ReviewsService } from './reviews.service';
 import { Public } from '../../common/public.decorator';
 import { ADMIN_ROLES, isAdminRole, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Controller('reviews')
 export class ReviewsController {
@@ -9,7 +10,7 @@ export class ReviewsController {
 
   @Public()
   @Get()
-  findAll(
+  async findAll(
     @Query('productId') productId?: string,
     @Query('status') status?: string,
     @Query('search') search?: string,
@@ -19,7 +20,7 @@ export class ReviewsController {
     @Req() req?: any,
   ) {
     const admin = isAdminRole(req?.user?.role);
-    return this.service.findAll({
+    const result = await this.service.findAll({
       productId,
       status: admin ? status : 'APPROVED',
       search: admin ? search : undefined,
@@ -28,28 +29,33 @@ export class ReviewsController {
       limit: limit ? parseInt(limit) : 10,
       publicOnly: !admin,
     });
+    return apiResponse(result, 'Lấy danh sách đánh giá thành công');
   }
 
   @Public()
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id, true);
+  async findOne(@Param('id') id: string) {
+    const result = await this.service.findOne(id, true);
+    return apiResponse(result, 'Lấy chi tiết đánh giá thành công');
   }
 
   @Post()
-  create(@Req() req: any, @Body() dto: any) {
-    return this.service.create(req.user?.sub || req.user?.id, dto);
+  async create(@Req() req: any, @Body() dto: any) {
+    const result = await this.service.create(req.user?.sub || req.user?.id, dto);
+    return apiResponse(result, 'Tạo đánh giá thành công');
   }
 
   @Roles(...ADMIN_ROLES)
   @Put(':id/status')
-  updateStatus(@Param('id') id: string, @Body() dto: { status: string }) {
-    return this.service.updateStatus(id, dto.status);
+  async updateStatus(@Param('id') id: string, @Body() dto: { status: string }) {
+    const result = await this.service.updateStatus(id, dto.status);
+    return apiResponse(result, 'Cập nhật trạng thái đánh giá thành công');
   }
 
   @Roles(...ADMIN_ROLES)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  async remove(@Param('id') id: string) {
+    const result = await this.service.remove(id);
+    return apiResponse(result, 'Xóa đánh giá thành công');
   }
 }

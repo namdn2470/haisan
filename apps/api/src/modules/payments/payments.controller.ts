@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Param, Body, Query } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Roles(...ADMIN_ROLES)
 @Controller('payments')
@@ -8,22 +9,26 @@ export class PaymentsController {
   constructor(private readonly service: PaymentsService) {}
 
   @Get()
-  findAll(@Query('orderId') orderId?: string) {
-    return this.service.findAll(orderId);
+  async findAll(@Query('orderId') orderId?: string) {
+    const result = await this.service.findAll(orderId);
+    return apiResponse(result, 'Lấy danh sách thanh toán thành công');
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const result = await this.service.findOne(id);
+    return apiResponse(result, 'Lấy chi tiết thanh toán thành công');
   }
 
   @Post()
-  create(@Body() dto: any) {
-    return this.service.create(dto);
+  async create(@Body() dto: any) {
+    const result = await this.service.create(dto);
+    return apiResponse(result, 'Tạo thanh toán thành công');
   }
 
   @Put(':id/status')
-  updateStatus(@Param('id') id: string, @Body() dto: { status: string }) {
-    return this.service.updateStatus(id, dto.status);
+  async updateStatus(@Param('id') id: string, @Body() dto: { status: string }) {
+    const result = await this.service.updateStatus(id, dto.status);
+    return apiResponse(result, 'Cập nhật trạng thái thanh toán thành công');
   }
 }

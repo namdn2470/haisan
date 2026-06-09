@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Param, Body, Query, Req } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Roles(...ADMIN_ROLES)
 @Controller('inventory')
@@ -8,45 +9,48 @@ export class InventoryController {
   constructor(private readonly service: InventoryService) {}
 
   @Get()
-  findAll(
+  async findAll(
     @Query('productId') productId?: string,
     @Query('lowStock') lowStock?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.service.findAll({
+    const result = await this.service.findAll({
       productId,
       lowStock: lowStock === 'true',
       search,
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 50,
     });
+    return apiResponse(result, 'Lấy danh sách tồn kho thành công');
   }
 
   @Get('logs')
-  findLogs(
+  async findLogs(
     @Query('productId') productId?: string,
     @Query('type') type?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.service.findLogs({
+    const result = await this.service.findLogs({
       productId,
       type,
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 20,
     });
+    return apiResponse(result, 'Lấy lịch sử tồn kho thành công');
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const result = await this.service.findOne(id);
+    return apiResponse(result, 'Lấy chi tiết tồn kho thành công');
   }
 
   @Post('import')
-  importStock(@Body() dto: any, @Req() req: any) {
-    return this.service.adjustStock({
+  async importStock(@Body() dto: any, @Req() req: any) {
+    const result = await this.service.adjustStock({
       type: 'IMPORT',
       productId: dto.productId,
       variantId: dto.variantId,
@@ -54,11 +58,12 @@ export class InventoryController {
       note: dto.note,
       createdBy: req.user?.name || req.user?.sub || 'Admin',
     });
+    return apiResponse(result, 'Nhập kho thành công');
   }
 
   @Post('export')
-  exportStock(@Body() dto: any, @Req() req: any) {
-    return this.service.adjustStock({
+  async exportStock(@Body() dto: any, @Req() req: any) {
+    const result = await this.service.adjustStock({
       type: 'EXPORT',
       productId: dto.productId,
       variantId: dto.variantId,
@@ -66,11 +71,12 @@ export class InventoryController {
       note: dto.note,
       createdBy: req.user?.name || req.user?.sub || 'Admin',
     });
+    return apiResponse(result, 'Xuất kho thành công');
   }
 
   @Post('adjust')
-  adjustStock(@Body() dto: any, @Req() req: any) {
-    return this.service.adjustStock({
+  async adjustStock(@Body() dto: any, @Req() req: any) {
+    const result = await this.service.adjustStock({
       type: 'ADJUSTMENT',
       productId: dto.productId,
       variantId: dto.variantId,
@@ -78,10 +84,12 @@ export class InventoryController {
       note: dto.note,
       createdBy: req.user?.name || req.user?.sub || 'Admin',
     });
+    return apiResponse(result, 'Điều chỉnh tồn kho thành công');
   }
 
   @Put(':id')
-  updateThreshold(@Param('id') id: string, @Body() dto: any) {
-    return this.service.updateThreshold(id, dto.lowStockThreshold);
+  async updateThreshold(@Param('id') id: string, @Body() dto: any) {
+    const result = await this.service.updateThreshold(id, dto.lowStockThreshold);
+    return apiResponse(result, 'Cập nhật ngưỡng kho thành công');
   }
 }

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Query, Param } from '@nestjs/
 import { ConfigService } from './config.service';
 import { Public } from '../../common/public.decorator';
 import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Roles(...ADMIN_ROLES)
 @Controller('config')
@@ -10,42 +11,50 @@ export class ConfigController {
 
   @Get()
   async getAll(@Query('group') group?: string) {
-    return this.configService.getAll(group);
+    const result = await this.configService.getAll(group);
+    return apiResponse(result, 'Lấy danh sách cấu hình thành công');
   }
 
   @Public()
   @Get('public')
   async getPublic() {
-    return this.configService.getPublic();
+    const result = await this.configService.getPublic();
+    return apiResponse(result, 'Lấy cấu hình công khai thành công');
   }
 
   @Get(':key')
   async getByKey(@Param('key') key: string) {
-    return this.configService.getByKey(key);
+    const result = await this.configService.getByKey(key);
+    return apiResponse(result, 'Lấy cấu hình thành công');
   }
 
   @Post()
   async create(@Body() body: { key: string; value: string; type?: string; group?: string; label?: string; description?: string }) {
-    return this.configService.set(body.key, body.value, body.type, body.group, body.label, body.description);
+    const result = await this.configService.set(body.key, body.value, body.type, body.group, body.label, body.description);
+    return apiResponse(result, 'Tạo cấu hình thành công');
   }
 
   @Put('batch')
   async batchUpdate(@Body() body: { items: { key: string; value: string; type?: string; group?: string; label?: string; description?: string }[] }) {
-    return this.configService.batchSet(body.items);
+    const result = await this.configService.batchSet(body.items);
+    return apiResponse(result, 'Cập nhật nhiều cấu hình thành công');
   }
 
   @Put(':key')
   async update(@Param('key') key: string, @Body() body: { value: string; type?: string; group?: string; label?: string; description?: string }) {
-    return this.configService.set(key, body.value, body.type, body.group, body.label, body.description);
+    const result = await this.configService.set(key, body.value, body.type, body.group, body.label, body.description);
+    return apiResponse(result, 'Cập nhật cấu hình thành công');
   }
 
   @Delete(':key')
   async delete(@Param('key') key: string) {
-    return this.configService.delete(key);
+    const result = await this.configService.delete(key);
+    return apiResponse(result, 'Xóa cấu hình thành công');
   }
 
   @Post('initialize')
   async initialize() {
-    return this.configService.initializeDefaults();
+    const result = await this.configService.initializeDefaults();
+    return apiResponse(result, 'Khởi tạo cấu hình mặc định thành công');
   }
 }

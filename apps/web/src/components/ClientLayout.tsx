@@ -3,6 +3,7 @@
 import React from 'react';
 import { CartProvider, ToastContainer } from '@/lib/cart-store';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { StoreSettingsProvider } from '@/contexts/StoreSettingsContext';
 
 export default function ClientLayout({
   children,
@@ -11,10 +12,12 @@ export default function ClientLayout({
 }) {
   return (
     <AuthProvider>
-      <CartProvider>
-        {children}
-        <ToastContainer />
-      </CartProvider>
+      <StoreSettingsProvider>
+        <CartProvider>
+          {children}
+          <ToastContainer />
+        </CartProvider>
+      </StoreSettingsProvider>
     </AuthProvider>
   );
 }

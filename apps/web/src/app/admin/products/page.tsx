@@ -9,7 +9,8 @@ import {
 import { useToast, useConfirm } from '../layout';
 import {
   fetchProducts, fetchProductById, fetchCategories,
-  createProduct, updateProduct, deleteProduct
+  createProduct, updateProduct, deleteProduct,
+  createCategory,
 } from '@/lib/admin/api';
 import ProductModal from '@/components/admin/ProductModal';
 import type { ProductImage, ProductFormData, Category } from '@/components/admin/ProductModal';
@@ -107,6 +108,7 @@ export default function ProductsPage() {
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [formLoading, setFormLoading] = useState(false);
   const [slugEdited, setSlugEdited] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
 
   const limit = 15;
 
@@ -302,6 +304,25 @@ export default function ProductsPage() {
       showError(err.message || 'Không thể lưu sản phẩm');
     } finally {
       setFormLoading(false);
+    }
+  };
+
+  const handleCreateCategory = async (name: string) => {
+    setCreatingCategory(true);
+    try {
+      const result = await createCategory({ name });
+      const newCat = result.data;
+      if (newCat && newCat.id) {
+        // Add to categories list
+        setCategories(prev => [...prev, { id: newCat.id, name: newCat.name, slug: newCat.slug }]);
+        // Auto-select the new category
+        setFormData(prev => ({ ...prev, categoryId: newCat.id }));
+        success(`Đã thêm danh mục "${newCat.name}"`);
+      }
+    } catch (err: any) {
+      throw new Error(err.message || 'Không thể tạo danh mục');
+    } finally {
+      setCreatingCategory(false);
     }
   };
 
@@ -693,6 +714,8 @@ export default function ProductsPage() {
         onRemoveImage={removeImage}
         onSetThumbnail={setThumbnail}
         onSubmit={handleSubmit}
+        onCreateCategory={handleCreateCategory}
+        creatingCategory={creatingCategory}
       />
     </div>
   );

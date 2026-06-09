@@ -4,6 +4,38 @@
 
 import { getApiBaseUrl, getToken } from '@/lib/api';
 
+// ── Unwrap helpers ──────────────────────────────────────────────────────────────
+// Backend wraps responses with apiResponse(): { success, message, data }
+// - Paginated list:  service returns { data, total, page, totalPages }
+//                    wrapped = { success, message, data: { data, total, page, totalPages } }
+// - Single object:   service returns { data } (or just the object)
+//                    wrapped = { success, message, data: { data } } or { success, message, data: {...} }
+//
+// After unwrapping: caller receives exactly what the service returned.
+//
+// autoUnwrap handles the apiResponse wrapper so callers don't need to.
+// For paginated list endpoints (findAll), the inner structure { data, total, page, totalPages }
+// is PRESERVED so callers can do result.data / result.total.
+function _unusedAutoUnwrap(raw: any): any {
+  if (raw == null || typeof raw !== 'object' || !('success' in raw) || !('data' in raw)) {
+    return raw; // Not wrapped
+  }
+  const inner = raw.data;
+  if (
+    inner != null &&
+    typeof inner === 'object' &&
+    !Array.isArray(inner) &&
+    'data' in inner &&
+    'total' in inner
+  ) {
+    return inner; // paginated: { data, total, page, totalPages }
+  }
+  if (inner != null && typeof inner === 'object' && 'data' in inner && inner.data !== undefined && Object.keys(inner).length === 1) {
+    return inner.data;
+  }
+  return inner; // single object or array
+}
+
 function getUrl(path: string) {
   const base = getApiBaseUrl();
   const cleanBase = base.replace(/\/$/, '');
@@ -20,15 +52,57 @@ async function adminFetch<T>(path: string, opts?: RequestInit): Promise<T> {
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...opts, headers });
-  const data = await res.json().catch(() => ({}));
+  let res: Response;
+  try {
+    res = await fetch(url, { ...opts, headers });
+  } catch (e: any) {
+    const isNetworkError = e?.name === 'TypeError' || e?.message === 'Failed to fetch';
+    if (isNetworkError) {
+      throw new Error(`Không thể kết nối đến API (${url}). Vui lòng kiểm tra backend đã chạy chưa.`);
+    }
+    throw e;
+  }
+  const raw = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const msg = data?.message || data?.error?.message || `API error: ${res.status}`;
+    const msg = raw?.message || raw?.error?.message || `API error: ${res.status}`;
     throw new Error(Array.isArray(msg) ? msg.join(', ') : msg);
   }
 
-  return data as T;
+  // autoUnwrap handles { success, message, data } wrapper:
+  // - Paginated list: inner has 'data' (array) + 'total' → preserve inner
+  // - Non-paginated { data: [...] } (no total): PRESERVE wrapper, caller uses .data
+  // - Single object wrapped as { data: {...} }: unwrap one level
+  // - Flat object or array: return as-is
+  if (raw != null && typeof raw === 'object' && 'success' in raw && 'data' in raw) {
+    const inner = raw.data;
+    // Paginated: inner has 'data' (array) + 'total'
+    if (
+      inner != null &&
+      typeof inner === 'object' &&
+      !Array.isArray(inner) &&
+      'data' in inner &&
+      Array.isArray(inner.data) &&
+      'total' in inner
+    ) {
+      return { ...inner } as T;
+    }
+    // Single object { data: {...} }: unwrap one level
+    // Only if inner has exactly 1 key ('data') AND data is NOT an array
+    if (
+      inner != null &&
+      typeof inner === 'object' &&
+      !Array.isArray(inner) &&
+      Object.keys(inner).length === 1 &&
+      'data' in inner &&
+      !Array.isArray(inner.data)
+    ) {
+      return inner.data as T;
+    }
+    // Non-paginated { data: [] } or plain object/array: preserve wrapper
+    return inner as T;
+  }
+  return raw as T;
 }
 
 // Dashboard
@@ -84,8 +158,8 @@ export async function updateOrderNote(id: string, note: string): Promise<any> {
 }
 
 export async function fetchOrderHistory(id: string): Promise<any[]> {
-  const res = await adminFetch<{ data: any[] }>(`/api/orders/${id}/history`);
-  return res.data || [];
+  const res = await adminFetch<any[]>(`/api/orders/${id}/history`);
+  return Array.isArray(res) ? res : [];
 }
 
 // Products

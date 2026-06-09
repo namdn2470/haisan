@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Put, Param, Body, Req } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
+import { apiResponse } from '../../common/api-response';
 
 @Roles(...ADMIN_ROLES)
 @Controller('notifications')
@@ -8,27 +9,32 @@ export class NotificationsController {
   constructor(private readonly service: NotificationsService) {}
 
   @Get()
-  findAll(@Req() req: any) {
-    return this.service.findAll(req.user?.sub);
+  async findAll(@Req() req: any) {
+    const result = await this.service.findAll(req.user?.sub);
+    return apiResponse(result, 'Lấy danh sách thông báo thành công');
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
+  async findOne(@Param('id') id: string) {
+    const result = await this.service.findOne(id);
+    return apiResponse(result, 'Lấy chi tiết thông báo thành công');
   }
 
   @Post()
-  create(@Body() dto: any) {
-    return this.service.create(dto);
+  async create(@Body() dto: any) {
+    const result = await this.service.create(dto);
+    return apiResponse(result, 'Tạo thông báo thành công');
   }
 
   @Put(':id/read')
-  markRead(@Param('id') id: string) {
-    return this.service.markRead(id);
+  async markRead(@Param('id') id: string) {
+    const result = await this.service.markRead(id);
+    return apiResponse(result, 'Đánh dấu đã đọc thành công');
   }
 
   @Put('read-all')
-  markAllRead(@Req() req: any) {
-    return this.service.markAllRead(req.user?.sub);
+  async markAllRead(@Req() req: any) {
+    const result = await this.service.markAllRead(req.user?.sub);
+    return apiResponse(result, 'Đánh dấu tất cả đã đọc thành công');
   }
 }

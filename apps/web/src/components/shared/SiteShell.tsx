@@ -10,15 +10,20 @@ import {
 import CitySelector from '@/lib/CitySelector';
 import { useCart } from '@/lib/cart-store';
 import { useAuth } from '@/contexts/AuthContext';
+import { useStoreSettings } from '@/contexts/StoreSettingsContext';
 
 export function TopBar() {
+  const { settings } = useStoreSettings();
+
+  const phone = settings?.phone || settings?.hotline || '0901 234 567';
+
   return (
     <div className="hs-topbar">
       <div className="hs-container hs-topbar-inner">
         <span><Truck size={14} /> Miễn phí giao đơn từ 500k</span>
         <span><ShieldCheck size={14} /> Đổi trả trong 24h</span>
         <span><RotateCcw size={14} /> Hoàn tiền 100% nếu không tươi</span>
-        <span className="hs-topbar-push"><Phone size={14} /> Hotline: <b>0901 234 567</b></span>
+        <span className="hs-topbar-push"><Phone size={14} /> Hotline: <b>{phone}</b></span>
       </div>
     </div>
   );
@@ -28,6 +33,7 @@ export function SiteHeader() {
   const router = useRouter();
   const { getItemCount } = useCart();
   const { user, isLoggedIn } = useAuth();
+  const { settings } = useStoreSettings();
   const cartCount = getItemCount();
 
   const submitSearch = (value: string) => {
@@ -36,6 +42,10 @@ export function SiteHeader() {
   };
 
   const displayName = user?.fullName || user?.phone || null;
+  const storeName = settings?.storeName || 'Hải Sản';
+  const logoParts = storeName.split(' ');
+  const logoTop = logoParts.slice(0, Math.ceil(logoParts.length / 2)).join(' ');
+  const logoBottom = logoParts.slice(Math.ceil(logoParts.length / 2)).join(' ');
 
   return (
     <header className="hs-header">
@@ -49,8 +59,8 @@ export function SiteHeader() {
             </svg>
           </div>
           <div className="hs-logo-text">
-            <span className="hs-logo-top">HẢI SẢN</span>
-            <span className="hs-logo-bottom">BIỂN XANH</span>
+            <span className="hs-logo-top">{logoTop.toUpperCase()}</span>
+            <span className="hs-logo-bottom">{logoBottom.toUpperCase()}</span>
           </div>
         </Link>
 
@@ -138,6 +148,21 @@ export function SiteNavBar() {
 }
 
 export function SiteFooter() {
+  const { settings } = useStoreSettings();
+
+  const storeName = settings?.storeName || 'HẢI SẢN BIỂN XANH';
+  const phone = settings?.phone || settings?.hotline || '0901 234 567';
+  const email = settings?.email || '';
+  const address = settings?.address || '';
+  const ward = settings?.ward || '';
+  const district = settings?.district || '';
+  const city = settings?.city || '';
+  const returnPolicy = settings?.returnPolicy || '';
+  const facebookUrl = settings?.facebookUrl || '#';
+  const zaloUrl = settings?.zaloUrl || '#';
+
+  const fullAddress = [address, ward, district, city].filter(Boolean).join(', ');
+
   return (
     <footer className="hs-footer">
       <div className="hs-container">
@@ -147,13 +172,19 @@ export function SiteFooter() {
               <div className="hs-logo-icon" style={{ width: 36, height: 36 }}>
                 <svg width="22" height="22" viewBox="0 0 32 32" fill="none"><path d="M4 20c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/><path d="M4 25c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4"/></svg>
               </div>
-              <span>HẢI SẢN BIỂN XANH</span>
+              <span>{storeName.toUpperCase()}</span>
             </div>
-            <p>Hải sản tươi sống đánh bắt mỗi ngày, giao hàng nhanh trong 2 giờ tại TP.HCM, Hà Nội & Đà Nẵng.</p>
+            <p>{settings?.storeDescription || 'Hải sản tươi sống đánh bắt mỗi ngày, giao hàng nhanh trong 2 giờ tại TP.HCM, Hà Nội & Đà Nẵng.'}</p>
             <div className="hs-footer-social">
-              <a href="#"><Facebook size={18} /></a>
-              <a href="#"><MessageCircle size={18} /></a>
-              <a href="#"><Phone size={18} /></a>
+              {facebookUrl && facebookUrl !== '#' && (
+                <a href={facebookUrl} target="_blank" rel="noopener noreferrer"><Facebook size={18} /></a>
+              )}
+              {zaloUrl && zaloUrl !== '#' && (
+                <a href={zaloUrl} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} /></a>
+              )}
+              {phone && (
+                <a href={`tel:${phone.replace(/\s/g, '')}`}><Phone size={18} /></a>
+              )}
             </div>
           </div>
           <div className="hs-footer-links">
@@ -168,22 +199,27 @@ export function SiteFooter() {
             <h4>Hỗ trợ</h4>
             <Link href="/orders">Theo dõi đơn hàng</Link>
             <Link href="/account">Tài khoản của tôi</Link>
-            <Link href="/products">Chính sách đổi trả</Link>
+            {returnPolicy && <Link href="/account">Chính sách đổi trả</Link>}
             <Link href="/products">Hướng dẫn đặt hàng</Link>
           </div>
           <div className="hs-footer-contact">
             <h4>Hệ thống cửa hàng</h4>
-            <div className="hs-contact-item"><MapPin size={16} /><div><b>TP. Hồ Chí Minh</b><span>123 Đường Biển, Q.1</span></div></div>
-            <div className="hs-contact-item"><MapPin size={16} /><div><b>Hà Nội</b><span>45 Phố Biển, Hoàn Kiếm</span></div></div>
-            <div className="hs-contact-item"><MapPin size={16} /><div><b>Đà Nẵng</b><span>78 Bạch Đằng, Hải Châu</span></div></div>
-            <div className="hs-contact-item"><Phone size={16} /><div><b>Hotline</b><span>0901 234 567</span></div></div>
+            {fullAddress && (
+              <div className="hs-contact-item"><MapPin size={16} /><div><b>{city || 'TP. HCM'}</b><span>{fullAddress}</span></div></div>
+            )}
+            {phone && (
+              <div className="hs-contact-item"><Phone size={16} /><div><b>Hotline</b><span>{phone}</span></div></div>
+            )}
+            {email && (
+              <div className="hs-contact-item"><Phone size={16} /><div><b>Email</b><span>{email}</span></div></div>
+            )}
           </div>
         </div>
         <div className="hs-footer-bottom">
-          <span>&copy; 2026 Hải Sản Biển Xanh. Tất cả quyền được bảo lưu.</span>
+          <span>&copy; 2026 {storeName}. Tất cả quyền được bảo lưu.</span>
           <div className="hs-footer-bottom-links">
             <Link href="#">Chính sách bảo mật</Link>
-            <Link href="#">Điều khoản sử dụng</Link>
+            <Link href="#">Điều khoơn sử dụng</Link>
           </div>
         </div>
       </div>

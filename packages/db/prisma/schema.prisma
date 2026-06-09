@@ -762,11 +762,19 @@ model SiteConfig {
 model StoreSettings {
   id                    String   @id @default(uuid()) @db.Uuid
   storeName             String   @default("Hải Sản Biển Xanh") @map("store_name")
+  storeDescription       String?  @map("store_description") @db.Text
   logo                  String?  @db.Text
   favicon               String?  @db.Text
+  taxCode               String?  @map("tax_code")
+  businessLicense        String?  @map("business_license") @db.Text
+  phone                 String?  @map("phone")
   hotline               String?  @map("hotline")
   email                 String?  @db.Text
   address               String?  @db.Text
+  ward                  String?  @map("ward")
+  district              String?  @map("district")
+  city                  String?  @map("city")
+  mapUrl                String?  @map("map_url") @db.Text
   openingHours          String?  @map("opening_hours") @db.Text
   deliveryPolicy        String?  @map("delivery_policy") @db.Text
   returnPolicy          String?  @map("return_policy") @db.Text
@@ -775,6 +783,8 @@ model StoreSettings {
   facebookUrl           String?  @map("facebook_url") @db.Text
   zaloUrl               String?  @map("zalo_url") @db.Text
   tiktokUrl             String?  @map("tiktok_url") @db.Text
+  youtubeUrl             String?  @map("youtube_url") @db.Text
+  instagramUrl           String?  @map("instagram_url") @db.Text
   seoTitle              String?  @map("seo_title") @db.Text
   seoDescription        String?  @map("seo_description") @db.Text
   seoKeywords           String?  @map("seo_keywords") @db.Text
