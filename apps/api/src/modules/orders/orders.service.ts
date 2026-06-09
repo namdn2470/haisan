@@ -196,7 +196,6 @@ export class OrdersService {
 
     const shippingFee = Number(dto.shipping_fee || 0);
     const totalAmount = Math.max(0, subtotal + shippingFee - discountAmount);
-
     const order = await this.prisma.order.create({
       data: {
         userId: userId || null,
