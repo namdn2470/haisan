@@ -21,6 +21,7 @@ export class ProductsService {
     page?: number;
     limit?: number;
     bestSeller?: boolean;
+    featured?: boolean;
     all?: boolean;
     publicOnly?: boolean;
   }) {
@@ -51,6 +52,10 @@ export class ProductsService {
 
     if (filters.bestSeller) {
       where.isBestSeller = true;
+    }
+
+    if (filters.featured) {
+      where.isFeatured = true;
     }
 
     if (filters.lowStock) {

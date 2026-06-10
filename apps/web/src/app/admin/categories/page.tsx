@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Search, Tag, Edit2, Trash2, AlertTriangle, FolderTree,
-  Eye, EyeOff, X, Image as ImageIcon, ChevronUp, ChevronDown, Upload,
+  Eye, EyeOff, Image as ImageIcon, ChevronUp, ChevronDown,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import {
   fetchCategories, fetchCategoryById, createCategory, updateCategory, deleteCategory,
 } from '@/lib/admin/api';
+import CategoryFormModal, { type CategoryFormValues } from '@/components/admin/categories/CategoryFormModal';
 
 interface Category {
   id: string;
@@ -24,33 +25,11 @@ interface Category {
   children?: Category[];
 }
 
-interface CategoryFormData {
-  name: string;
-  slug: string;
-  parentId: string;
-  description: string;
-  imageUrl: string;
-  iconUrl: string;
-  sortOrder: string;
-  isActive: boolean;
-}
-
-const initialFormData: CategoryFormData = {
-  name: '',
-  slug: '',
-  parentId: '',
-  description: '',
-  imageUrl: '',
-  iconUrl: '',
-  sortOrder: '',
-  isActive: true,
-};
-
 function slugify(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/đ/g, 'd')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)+/g, '');
@@ -74,11 +53,10 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState<CategoryFormData>(initialFormData);
-  const [formLoading, setFormLoading] = useState(false);
-  const [slugEdited, setSlugEdited] = useState(false);
+  const [modalInitialData, setModalInitialData] = useState<Partial<CategoryFormValues> | undefined>(undefined);
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -86,9 +64,10 @@ export default function CategoriesPage() {
     try {
       const result = await fetchCategories();
       setCategories(result.data || []);
-    } catch (err: any) {
-      setError(err.message || 'Không thể tải danh mục');
-      showError(err.message || 'Không thể tải danh mục');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể tải danh mục';
+      setError(msg);
+      showError(msg);
     } finally {
       setLoading(false);
     }
@@ -122,41 +101,27 @@ export default function CategoriesPage() {
     return flatten(categories);
   };
 
-  const handleNameChange = (value: string) => {
-    setFormData(prev => ({ ...prev, name: value }));
-    if (!slugEdited) {
-      setFormData(prev => ({ ...prev, slug: slugify(value) }));
-    }
-  };
-
-  const handleSlugChange = (value: string) => {
-    setSlugEdited(true);
-    setFormData(prev => ({ ...prev, slug: slugify(value) }));
-  };
-
   const openAddModal = () => {
     setEditingCategory(null);
-    setFormData(initialFormData);
-    setSlugEdited(false);
+    setModalInitialData(undefined);
     setShowModal(true);
   };
 
   const openEditModal = async (cat: Category) => {
     try {
       const result = await fetchCategoryById(cat.id);
-      const fullCat = result.data;
+      const fullCat = result.data ?? result;
       setEditingCategory(fullCat);
-      setFormData({
+      setModalInitialData({
         name: fullCat.name || '',
         slug: fullCat.slug || '',
         parentId: fullCat.parentId || '',
         description: fullCat.description || '',
         imageUrl: fullCat.imageUrl || '',
         iconUrl: fullCat.iconUrl || '',
-        sortOrder: String(fullCat.sortOrder || ''),
+        sortOrder: String(fullCat.sortOrder ?? ''),
         isActive: fullCat.isActive !== false,
       });
-      setSlugEdited(true);
       setShowModal(true);
     } catch {
       showError('Không thể tải thông tin danh mục');
@@ -166,57 +131,29 @@ export default function CategoriesPage() {
   const closeModal = () => {
     setShowModal(false);
     setEditingCategory(null);
-    setFormData(initialFormData);
-    setSlugEdited(false);
+    setModalInitialData(undefined);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'imageUrl' | 'iconUrl') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setFormData(prev => ({ ...prev, [field]: ev.target?.result as string }));
+  const handleModalSubmit = async (values: CategoryFormValues) => {
+    const payload = {
+      name: values.name.trim(),
+      slug: values.slug.trim() || slugify(values.name),
+      parentId: values.parentId || null,
+      description: values.description.trim() || null,
+      imageUrl: values.imageUrl || null,
+      iconUrl: values.iconUrl || null,
+      sortOrder: values.sortOrder ? Number(values.sortOrder) : undefined,
+      isActive: values.isActive,
     };
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!formData.name.trim()) {
-      showError('Vui lòng nhập tên danh mục');
-      return;
+    if (editingCategory) {
+      await updateCategory(editingCategory.id, payload);
+      success('Đã cập nhật danh mục');
+    } else {
+      await createCategory(payload);
+      success('Đã thêm danh mục mới');
     }
-
-    setFormLoading(true);
-    try {
-      const payload = {
-        name: formData.name.trim(),
-        slug: formData.slug.trim() || slugify(formData.name),
-        parentId: formData.parentId || null,
-        description: formData.description.trim() || null,
-        imageUrl: formData.imageUrl || null,
-        iconUrl: formData.iconUrl || null,
-        sortOrder: formData.sortOrder ? Number(formData.sortOrder) : undefined,
-        isActive: formData.isActive,
-      };
-
-      if (editingCategory) {
-        await updateCategory(editingCategory.id, payload);
-        success('Đã cập nhật danh mục');
-      } else {
-        await createCategory(payload);
-        success('Đã thêm danh mục mới');
-      }
-      closeModal();
-      loadCategories();
-    } catch (err: any) {
-      showError(err.message || 'Không thể lưu danh mục');
-    } finally {
-      setFormLoading(false);
-    }
+    loadCategories();
   };
 
   const handleToggleActive = async (cat: Category) => {
@@ -224,8 +161,8 @@ export default function CategoriesPage() {
       await updateCategory(cat.id, { isActive: !cat.isActive });
       success(!cat.isActive ? 'Đã hiển thị danh mục' : 'Đã ẩn danh mục');
       loadCategories();
-    } catch (err: any) {
-      showError(err.message || 'Không thể cập nhật trạng thái');
+    } catch (err: unknown) {
+      showError(err instanceof Error ? err.message : 'Không thể cập nhật trạng thái');
     }
   };
 
@@ -248,8 +185,8 @@ export default function CategoriesPage() {
             success('Đã xóa danh mục');
           }
           loadCategories();
-        } catch (err: any) {
-          showError(err.message || 'Không thể xóa danh mục');
+        } catch (err: unknown) {
+          showError(err instanceof Error ? err.message : 'Không thể xóa danh mục');
         }
       },
     });
@@ -300,8 +237,8 @@ export default function CategoriesPage() {
           }
           success('Đã tạo 7 danh mục mẫu');
           loadCategories();
-        } catch (err: any) {
-          showError(err.message || 'Không thể tạo danh mục mẫu');
+        } catch (err: unknown) {
+          showError(err instanceof Error ? err.message : 'Không thể tạo danh mục mẫu');
         }
       },
     });
@@ -318,7 +255,7 @@ export default function CategoriesPage() {
           <p>{categories.length} danh mục</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="adm-btn-secondary" onClick={handleCreateSamples}>
+          <button className="adm-btn-ghost" onClick={handleCreateSamples}>
             <Plus size={16} />
             Tạo mẫu
           </button>
@@ -486,8 +423,7 @@ export default function CategoriesPage() {
                           </div>
                         </td>
                       </tr>
-                      {/* Children */}
-                      {children.sort((a, b) => a.sortOrder - b.sortOrder).map((child, _childIdx) => (
+                      {children.sort((a, b) => a.sortOrder - b.sortOrder).map((child) => (
                         <tr key={child.id} className={!child.isActive ? 'adm-row-inactive' : ''}>
                           <td></td>
                           <td></td>
@@ -559,145 +495,15 @@ export default function CategoriesPage() {
         )}
       </div>
 
-      {/* Category Modal */}
-      {showModal && (
-        <div className="adm-modal-overlay" onClick={(e) => e.target === e.currentTarget && closeModal()}>
-          <div className="adm-modal">
-            <div className="adm-modal-header">
-              <h3>{editingCategory ? 'Sửa danh mục' : 'Thêm danh mục mới'}</h3>
-              <button className="adm-modal-close" onClick={closeModal}>
-                <X size={20} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="adm-modal-body">
-                <div className="adm-form-group">
-                  <label className="adm-form-label required">Tên danh mục</label>
-                  <input
-                    type="text"
-                    className="adm-form-input"
-                    placeholder="Nhập tên danh mục"
-                    value={formData.name}
-                    onChange={e => handleNameChange(e.target.value)}
-                  />
-                </div>
-
-                <div className="adm-form-group">
-                  <label className="adm-form-label">Slug</label>
-                  <input
-                    type="text"
-                    className="adm-form-input"
-                    placeholder="tu-dong-tao"
-                    value={formData.slug}
-                    onChange={e => handleSlugChange(e.target.value)}
-                  />
-                </div>
-
-                <div className="adm-form-group">
-                  <label className="adm-form-label">Danh mục cha</label>
-                  <select
-                    className="adm-form-select"
-                    value={formData.parentId}
-                    onChange={e => setFormData(prev => ({ ...prev, parentId: e.target.value }))}
-                  >
-                    <option value="">Không có (Danh mục gốc)</option>
-                    {parentOptions.map(opt => (
-                      <option key={opt.id} value={opt.id}>
-                        {'  '.repeat(opt.depth)}{opt.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="adm-form-group">
-                  <label className="adm-form-label">Mô tả</label>
-                  <textarea
-                    className="adm-form-textarea"
-                    placeholder="Mô tả danh mục..."
-                    rows={3}
-                    value={formData.description}
-                    onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  />
-                </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Ảnh danh mục</label>
-                    <div className="adm-image-upload-single">
-                      {formData.imageUrl ? (
-                        <div className="adm-image-preview">
-                          <img src={formData.imageUrl} alt="Preview" />
-                          <button type="button" className="adm-image-remove" onClick={() => setFormData(prev => ({ ...prev, imageUrl: '' }))}>
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="adm-image-upload-btn">
-                          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'imageUrl')} />
-                          <Upload size={20} />
-                          <span>Chọn ảnh</span>
-                        </label>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Icon URL</label>
-                    <div className="adm-image-upload-single">
-                      {formData.iconUrl ? (
-                        <div className="adm-image-preview">
-                          <img src={formData.iconUrl} alt="Icon" />
-                          <button type="button" className="adm-image-remove" onClick={() => setFormData(prev => ({ ...prev, iconUrl: '' }))}>
-                            <X size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="adm-image-upload-btn">
-                          <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'iconUrl')} />
-                          <Upload size={20} />
-                          <span>Chọn icon</span>
-                        </label>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-form-label">Thứ tự hiển thị</label>
-                    <input
-                      type="number"
-                      className="adm-form-input"
-                      placeholder="0"
-                      min="0"
-                      value={formData.sortOrder}
-                      onChange={e => setFormData(prev => ({ ...prev, sortOrder: e.target.value }))}
-                    />
-                  </div>
-                  <div className="adm-form-group" style={{ display: 'flex', alignItems: 'center', paddingTop: 24 }}>
-                    <label className="adm-form-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={formData.isActive}
-                        onChange={e => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                      />
-                      <span>Hiển thị danh mục</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div className="adm-modal-footer">
-                <button type="button" className="adm-btn-secondary" onClick={closeModal}>
-                  Hủy
-                </button>
-                <button type="submit" className="adm-btn-primary" disabled={formLoading}>
-                  {formLoading ? 'Đang lưu...' : (editingCategory ? 'Lưu thay đổi' : 'Thêm danh mục')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Category Form Modal */}
+      <CategoryFormModal
+        isOpen={showModal}
+        mode={editingCategory ? 'edit' : 'create'}
+        initialData={modalInitialData}
+        parentOptions={parentOptions}
+        onClose={closeModal}
+        onSubmit={handleModalSubmit}
+      />
     </div>
   );
 }

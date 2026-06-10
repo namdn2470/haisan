@@ -6,7 +6,7 @@ import {
   Calendar, AlertTriangle, Tag, Ticket, X,
   Zap,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import {
   fetchPromotions,
   createPromotion,
@@ -275,15 +275,18 @@ export default function PromotionsPage() {
       if (modalMode === 'create') {
         const result = await createPromotion(payload);
         success('Đã thêm khuyến mãi thành công');
-        if (result.data) {
-          setPromotions(prev => [result.data, ...prev]);
+        // adminFetch unwraps { data: promo } → result is the promo directly
+        const created = result.data ?? result;
+        if (created && created.id) {
+          setPromotions(prev => [created, ...prev]);
           setTotal(prev => prev + 1);
         }
       } else {
         const result = await updatePromotion(editId!, payload);
         success('Đã cập nhật khuyến mãi thành công');
-        if (result.data) {
-          setPromotions(prev => prev.map(p => p.id === editId ? result.data : p));
+        const updated = result.data ?? result;
+        if (updated && updated.id) {
+          setPromotions(prev => prev.map(p => p.id === editId ? updated : p));
         }
       }
       closeModal();

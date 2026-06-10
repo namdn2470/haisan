@@ -143,4 +143,64 @@ export class PromotionsService {
     await this.prisma.promotion.delete({ where: { id } });
     return { message: 'Đã xóa khuyến mãi', softDeleted: false };
   }
+
+  async validate(code: string, subtotal: number) {
+    const now = new Date();
+    const promo = await this.prisma.promotion.findFirst({
+      where: {
+        code: code.trim().toUpperCase(),
+        isActive: true,
+        startAt: { lte: now },
+        endAt: { gte: now },
+      },
+    });
+
+    if (!promo) {
+      throw new NotFoundException('Mã khuyến mãi không tồn tại hoặc đã hết hạn');
+    }
+
+    if (promo.usageLimit !== null && promo.usedCount >= promo.usageLimit) {
+      throw new BadRequestException('Mã khuyến mãi đã hết lượt sử dụng');
+    }
+
+    const minOrder = Number(promo.minOrderAmount);
+    if (minOrder > 0 && subtotal < minOrder) {
+      throw new BadRequestException(
+        `Đơn hàng tối thiểu ${minOrder.toLocaleString('vi-VN')}đ để sử dụng mã này`
+      );
+    }
+
+    let discountAmount = 0;
+
+    if (promo.discountType === 'PERCENT') {
+      discountAmount = Math.floor((subtotal * Number(promo.discountValue)) / 100);
+    } else if (promo.discountType === 'FIXED_AMOUNT') {
+      discountAmount = Number(promo.discountValue);
+    } else if (promo.discountType === 'FREE_SHIPPING') {
+      // Free shipping discount = 0 in the order total; shipping fee handled separately
+      discountAmount = 0;
+    }
+
+    // Apply max discount cap
+    const maxDiscount = promo.maxDiscountAmount ? Number(promo.maxDiscountAmount) : 0;
+    if (maxDiscount > 0) {
+      discountAmount = Math.min(discountAmount, maxDiscount);
+    }
+
+    // Cap at subtotal
+    discountAmount = Math.min(discountAmount, subtotal);
+
+    return {
+      id: promo.id,
+      code: promo.code,
+      name: promo.name,
+      discountType: promo.discountType,
+      discountValue: Number(promo.discountValue),
+      discountAmount,
+      subtotal,
+      finalTotal: subtotal - discountAmount,
+      minOrderAmount: Number(promo.minOrderAmount),
+      maxDiscountAmount: promo.maxDiscountAmount ? Number(promo.maxDiscountAmount) : null,
+    };
+  }
 }

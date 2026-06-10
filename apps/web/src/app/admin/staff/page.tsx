@@ -6,7 +6,7 @@ import {
   Mail, Phone, ShieldCheck, AlertTriangle, X, UserX,
   Shield, Users,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import { fetchStaff, createStaff, updateStaff, toggleStaffStatus, deleteStaff } from '@/lib/admin/api';
 
 interface StaffMember {

@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Facebook, Heart, Home, MapPin, Menu, MessageCircle, Phone, RotateCcw,
   Search, ShieldCheck, ShoppingCart, Truck, User,
+  Fish, Soup, Package, Tag, Newspaper, Shell, Waves,
 } from 'lucide-react';
 import CitySelector from '@/lib/CitySelector';
 import { useCart } from '@/lib/cart-store';
@@ -106,16 +107,27 @@ export function SiteNavBar() {
   const searchParams = useSearchParams();
   const category = searchParams.get('category');
   const promotion = searchParams.get('promotion');
-  const menu = [
-    { label: 'Trang chủ', href: '/', exact: true },
-    { label: 'Tôm', href: '/products?category=tom', category: 'tom' },
-    { label: 'Cua - Ghẹ', href: '/products?category=cua-ghe', category: 'cua-ghe' },
-    { label: 'Cá', href: '/products?category=ca', category: 'ca' },
-    { label: 'Mực', href: '/products?category=muc', category: 'muc' },
-    { label: 'Ốc - Sò', href: '/products?category=oc-so', category: 'oc-so' },
-    { label: 'Combo', href: '/products?category=combo', category: 'combo' },
-    { label: 'Khuyến mãi', href: '/products?promotion=true', promotion: true },
-    { label: 'Tin tức', href: '/news', path: '/news' },
+
+  type NavItem = {
+    label: string;
+    href: string;
+    exact?: boolean;
+    category?: string;
+    promotion?: boolean;
+    path?: string;
+    icon?: React.ReactNode;
+  };
+
+  const menu: NavItem[] = [
+    { label: 'Trang chủ', href: '/', exact: true, icon: <Home size={14} /> },
+    { label: 'Tôm', href: '/products?category=tom', category: 'tom', icon: <Waves size={14} /> },
+    { label: 'Cua - Ghẹ', href: '/products?category=cua-ghe', category: 'cua-ghe', icon: <Shell size={14} /> },
+    { label: 'Cá', href: '/products?category=ca', category: 'ca', icon: <Fish size={14} /> },
+    { label: 'Mực', href: '/products?category=muc', category: 'muc', icon: <Soup size={14} /> },
+    { label: 'Ốc - Sò', href: '/products?category=oc-so', category: 'oc-so', icon: <Shell size={14} /> },
+    { label: 'Combo', href: '/products?category=combo', category: 'combo', icon: <Package size={14} /> },
+    { label: 'Khuyến mãi', href: '/products?promotion=true', promotion: true, icon: <Tag size={14} /> },
+    { label: 'Tin tức', href: '/news', path: '/news', icon: <Newspaper size={14} /> },
   ];
 
   return (
@@ -135,7 +147,7 @@ export function SiteNavBar() {
                     : false;
             return (
               <Link key={item.label} href={item.href} className={`hs-nav-link ${active ? 'active' : ''}`}>
-                {active && <Home size={14} />}
+                {item.icon}
                 {item.label}
               </Link>
             );

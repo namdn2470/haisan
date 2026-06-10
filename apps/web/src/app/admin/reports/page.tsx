@@ -6,7 +6,7 @@ import {
   Package, Users, AlertTriangle, ArrowLeft,
   Calendar, ChevronDown, Download, RefreshCw,
 } from 'lucide-react';
-import { useToast } from '../layout';
+import { useToast } from '../layout-client';
 
 // ——— Types ———
 type TimeRange = 'today' | '7days' | '30days' | 'thisMonth' | 'thisYear' | 'custom';

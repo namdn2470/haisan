@@ -5,7 +5,7 @@ import {
   Settings, Save, RefreshCw, Globe, Home, Menu, Phone,
   CheckCircle, LayoutTemplate
 } from 'lucide-react';
-import { useToast } from '../layout';
+import { useToast } from '../layout-client';
 import {
   getAllConfigs,
   batchUpdateConfigs,

@@ -5,7 +5,7 @@ import {
   Bell, Plus, Search, AlertTriangle, CheckCheck,
   ShoppingCart, CreditCard, Truck, Star,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import { fetchNotifications, markNotificationRead } from '@/lib/admin/api';
 
 const NOTIF_ICONS: Record<string, React.ReactNode> = {

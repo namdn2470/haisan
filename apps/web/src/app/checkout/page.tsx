@@ -23,6 +23,7 @@ import {
   calculatePromotionDiscount,
   createOrder,
   getPromotionByCode,
+  validatePromotion,
 } from '@/services';
 import { getShippingQuote } from '@/services/shippingService';
 
@@ -103,6 +104,16 @@ export default function CheckoutPage() {
   const applyCoupon = async () => {
     if (!couponCode.trim()) return;
     setCouponError('');
+
+    // Try new validate endpoint first (returns calculated discountAmount)
+    const validated = await validatePromotion(couponCode.trim(), subtotal);
+    if (validated) {
+      setCouponDiscount(validated.discountAmount);
+      setCouponApplied(validated.code || couponCode.trim());
+      return;
+    }
+
+    // Fallback to old getPromotionByCode + client-side calculation
     const promo = await getPromotionByCode(couponCode.trim());
     if (promo) {
       const disc = calculatePromotionDiscount(promo, subtotal);
@@ -145,7 +156,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
 
     try {
-      await createOrder({
+      const order = await createOrder({
         customer_name: form.customerName,
         customer_phone: form.customerPhone,
         customer_email: form.customerEmail || undefined,
@@ -172,7 +183,7 @@ export default function CheckoutPage() {
         })),
       });
       clearCart();
-      router.push('/order-success');
+      router.push(`/order-success?orderCode=${encodeURIComponent(order.orderCode)}`);
     } catch (err: any) {
       setSubmitError(err?.message || 'Đặt hàng thất bại. Vui lòng thử lại.');
       setSubmitting(false);

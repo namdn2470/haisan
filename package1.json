@@ -1,0 +1,8 @@
+{
+    "scripts": {
+      "kill:web": "lsof -ti tcp:3012 | xargs kill -9 || true",
+      "clean:web": "rm -rf apps/web/.next apps/web/node_modules/.cache node_modules/.cache",
+      "restart:web": "pnpm run kill:web && pnpm run clean:web && pnpm run dev:web"
+    }
+  }
+  

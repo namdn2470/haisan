@@ -20,6 +20,7 @@ export class ProductsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('bestSeller') bestSeller?: string,
+    @Query('featured') featured?: string,
     @Query('all') all?: string,
     @Req() req?: any,
   ) {
@@ -33,6 +34,7 @@ export class ProductsController {
       page: page ? parseInt(page) : 1,
       limit: limit ? parseInt(limit) : 20,
       bestSeller: bestSeller === 'true',
+      featured: featured === 'true',
       all: admin && all === 'true',
       publicOnly: !admin,
     });

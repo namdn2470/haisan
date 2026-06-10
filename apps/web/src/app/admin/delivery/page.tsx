@@ -7,7 +7,7 @@ import {
   Plus, Edit2, Trash2, ToggleLeft, ToggleRight,
   ArrowUp, ArrowDown,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import {
   fetchDeliveries, assignDelivery, updateDeliveryStatus, fetchStaff,
   fetchShippingZones, createShippingZone,

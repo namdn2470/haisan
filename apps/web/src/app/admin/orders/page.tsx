@@ -7,7 +7,7 @@ import {
   ChevronLeft, ChevronRight, Clock, User, Package,
   CreditCard, Truck, FileText, RefreshCw,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import { fetchOrders, fetchOrderById, fetchOrderHistory, updateOrderStatus, updateOrderNote } from '@/lib/admin/api';
 
 // Order Status types matching user requirements
@@ -225,7 +225,8 @@ export default function OrdersPage() {
               fetchOrderById(orderId),
               fetchOrderHistory(orderId),
             ]);
-            setSelectedOrder({ ...orderRes.data, statusHistory: history });
+            // adminFetch unwraps { data: order } → orderRes is the order object directly
+            setSelectedOrder({ ...(orderRes.data ?? orderRes), statusHistory: history });
           }
         } catch (err: any) {
           showError(err.message || 'Không thể cập nhật trạng thái');

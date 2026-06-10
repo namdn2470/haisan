@@ -1,13 +1,13 @@
 // SETTINGS_PAGE_UI_REBUILT
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Save, Building2, Phone, Mail, Globe, Link2,
   Facebook, MessageSquare, ImagePlus, AlertCircle,
   RefreshCw, Trash2, ExternalLink,
 } from 'lucide-react';
-import { useToast } from '../layout';
+import { useToast } from '../layout-client';
 import { fetchSettings, updateSettings } from '@/lib/admin/api';
 import { unwrapApiData } from '@/lib/api-response';
 
@@ -762,6 +762,8 @@ function TabButton({
 // ——— Main Component ———
 export default function SettingsPage() {
   const toast = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   const [activeSection, setActiveSection] = useState<Section>('store');
   const [loading, setLoading] = useState(true);
@@ -770,9 +772,12 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<StoreSettings>(emptySettings());
   const [originalSettings, setOriginalSettings] = useState<StoreSettings | null>(null);
 
+  const toastShownRef = useRef(false);
+
   const loadSettings = useCallback(async () => {
     setLoading(true);
     setFetchError(false);
+    toastShownRef.current = false;
     try {
       const res = await fetchSettings();
       const data = normalizeResponse(res);
@@ -781,11 +786,14 @@ export default function SettingsPage() {
     } catch (err) {
       console.error('Failed to load settings:', err);
       setFetchError(true);
-      toast.error('Không thể tải cài đặt. Vui lòng thử lại.');
+      if (!toastShownRef.current) {
+        toastShownRef.current = true;
+        toastRef.current.error('Không thể tải cài đặt. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []); // stable - no deps, runs once on mount
 
   useEffect(() => {
     loadSettings();
@@ -854,10 +862,10 @@ export default function SettingsPage() {
 
       setSettings(updated);
       setOriginalSettings(updated);
-      toast.success('Đã lưu cài đặt thành công');
+      toastRef.current.success('Đã lưu cài đặt thành công');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể lưu cài đặt';
-      toast.error(msg);
+      toastRef.current.error(msg);
     } finally {
       setSaving(false);
     }

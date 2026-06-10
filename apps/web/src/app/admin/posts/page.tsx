@@ -5,7 +5,7 @@ import {
   Plus, Search, Filter, Edit2, Trash2, AlertTriangle,
   FileText, Eye, EyeOff,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import {
   fetchPosts,
   fetchPostById,
@@ -156,7 +156,8 @@ export default function PostsPage() {
   const openEdit = async (post: Post) => {
     try {
       const res = await fetchPostById(post.id);
-      const data = res.data;
+      // adminFetch unwraps { data: post } → res is the post object directly
+      const data = res.data ?? res;
       setEditingPost(data);
       setForm({
         title: data.title || '',

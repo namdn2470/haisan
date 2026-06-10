@@ -116,6 +116,8 @@ export async function getProducts(params?: {
   search?: string;
   sort?: string;
   limit?: number;
+  featured?: boolean;
+  bestSeller?: boolean;
 }): Promise<Product[]> {
   const normalizedSort = normalizeSort(params?.sort);
   try {
@@ -124,6 +126,8 @@ export async function getProducts(params?: {
     if (params?.search) searchParams.set('search', params.search);
     if (params?.sort) searchParams.set('sort', normalizedSort);
     if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.featured) searchParams.set('featured', 'true');
+    if (params?.bestSeller) searchParams.set('bestSeller', 'true');
 
     const qs = searchParams.toString();
     const res = await api<unknown>(`/api/products${qs ? `?${qs}` : ''}`);

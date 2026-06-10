@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Truck, ShieldCheck, Scale, ChevronRight,
   ShoppingCart, Phone,
-  Leaf,
+  Leaf, Star,
   Flame, Headphones, Package, Undo2,
 } from 'lucide-react';
 import { img } from '@/lib/api';
@@ -35,16 +35,19 @@ type HomeClientProps = {
   categories: HomeCategory[];
   products: HomeProduct[];
   banners: HomeBanner[];
+  featuredProducts: HomeProduct[];
+  bestSellerProducts: HomeProduct[];
 };
 
-export default function HomeClient({ categories, products, banners }: HomeClientProps) {
+export default function HomeClient({ categories, products, banners, featuredProducts, bestSellerProducts }: HomeClientProps) {
   return (
     <SiteShell>
       <HeroSection />
       <CategoryStrip categories={categories} />
       <HomePromoCards banners={banners} />
       <BuyTogetherSection products={products} />
-      <BestSellerSection products={products} />
+      <FeaturedSection products={featuredProducts} />
+      <BestSellerSection products={bestSellerProducts} />
       <CommitmentBar />
     </SiteShell>
   );
@@ -246,9 +249,37 @@ function BuyTogetherSection({ products }: { products: HomeProduct[] }) {
 }
 
 /* ============================================
+   FEATURED SECTION
+   ============================================ */
+function FeaturedSection({ products }: { products: HomeProduct[] }) {
+  if (products.length === 0) return null;
+
+  return (
+    <section className="hs-best-section">
+      <div className="hs-container">
+        <div className="hs-section-header">
+          <div className="hs-section-title">
+            <Star size={20} />
+            <h2>Sản phẩm nổi bật</h2>
+          </div>
+          <Link href="/products" className="hs-section-link">Xem tất cả <ChevronRight size={14} /></Link>
+        </div>
+        <div className="hs-product-grid">
+          {products.map(p => (
+            <ProductCard key={p.id} product={p} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ============================================
    BEST SELLER SECTION (6-col grid + side promo)
    ============================================ */
 function BestSellerSection({ products }: { products: HomeProduct[] }) {
+  if (products.length === 0) return null;
+
   return (
     <section className="hs-best-section">
       <div className="hs-container">
@@ -262,16 +293,9 @@ function BestSellerSection({ products }: { products: HomeProduct[] }) {
               <Link href="/products" className="hs-section-link">Xem tất cả <ChevronRight size={14} /></Link>
             </div>
             <div className="hs-product-grid hs-grid-12">
-              {products.slice(0, 12).map(p => (
+              {products.map(p => (
                 <ProductCard key={p.id} product={p} />
               ))}
-              {products.length === 0 && (
-                <div className="hs-empty-state">
-                  <Package size={42} strokeWidth={1.4} />
-                  <h3>Chưa có sản phẩm đang bán</h3>
-                  <p>Vui lòng kiểm tra dữ liệu sản phẩm trong admin.</p>
-                </div>
-              )}
             </div>
           </div>
 

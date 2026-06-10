@@ -6,7 +6,7 @@ import {
   X, TrendingUp, TrendingDown, History,
   Plus, Minus, Settings2, RefreshCw, ArrowUpDown,
 } from 'lucide-react';
-import { useToast } from '../layout';
+import { useToast } from '../layout-client';
 import { fetchInventory, fetchInventoryLogs, importStock, exportStock, adjustStock } from '@/lib/admin/api';
 
 interface InventoryItem {

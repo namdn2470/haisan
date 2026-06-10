@@ -8,7 +8,7 @@ import {
   X, Check, User,
   Package, Calendar, DollarSign,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import { fetchCustomers, updateCustomerStatus, fetchCustomerById, fetchCustomerOrders } from '@/lib/admin/api';
 
 interface Customer {

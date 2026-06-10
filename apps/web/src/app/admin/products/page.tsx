@@ -6,7 +6,7 @@ import {
   AlertTriangle, Package, Star, TrendingUp,
   ChevronUp, ChevronDown,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import {
   fetchProducts, fetchProductById, fetchCategories,
   createProduct, updateProduct, deleteProduct,
@@ -173,7 +173,8 @@ export default function ProductsPage() {
   const openEditModal = async (product: Product) => {
     try {
       const result = await fetchProductById(product.id);
-      const fullProduct = result.data;
+      // adminFetch unwraps { data: product } → returns product directly
+      const fullProduct = result.data ?? result;
       setEditingProduct(fullProduct);
       setFormData({
         name: fullProduct.name || '',
@@ -211,7 +212,12 @@ export default function ProductsPage() {
     const files = e.target.files;
     if (!files) return;
 
+    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
     Array.from(files).forEach(file => {
+      if (file.size > MAX_SIZE) {
+        showError(`Ảnh "${file.name}" vượt quá 2MB. Vui lòng chọn ảnh nhỏ hơn.`);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
         const imageUrl = ev.target?.result as string;
@@ -251,6 +257,7 @@ export default function ProductsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formLoading) return;
 
     if (!formData.name.trim()) {
       showError('Vui lòng nhập tên sản phẩm');
@@ -311,7 +318,8 @@ export default function ProductsPage() {
     setCreatingCategory(true);
     try {
       const result = await createCategory({ name });
-      const newCat = result.data;
+      // adminFetch unwraps { data: category } → result is the category directly
+      const newCat = result.data ?? result;
       if (newCat && newCat.id) {
         // Add to categories list
         setCategories(prev => [...prev, { id: newCat.id, name: newCat.name, slug: newCat.slug }]);

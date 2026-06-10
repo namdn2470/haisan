@@ -5,7 +5,7 @@ import {
   Plus, Search, Filter, Edit2, Trash2, Image, AlertTriangle,
   Calendar, Eye, EyeOff, X, ArrowUp, ArrowDown, ImageIcon,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import {
   fetchBanners,
   fetchBannerById,
@@ -117,8 +117,9 @@ export default function BannersPage() {
 
   const openEdit = async (banner: Banner) => {
     try {
-      const res = await fetchBannerById(banner.id) as { data: Banner };
-      const data = res.data;
+      const res = await fetchBannerById(banner.id) as any;
+      // adminFetch unwraps { data: banner } → res is the banner object directly
+      const data: Banner = res.data ?? res;
       setEditingBanner(data);
       setForm({
         title: data.title || '',

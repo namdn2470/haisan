@@ -5,7 +5,7 @@ import {
   Search, Filter, AlertTriangle, CheckCircle, XCircle,
   Star, Trash2, Image as ImageIcon, MessageSquare, X,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import { fetchReviews, updateReviewStatus, deleteReview, fetchProducts } from '@/lib/admin/api';
 
 const REVIEW_STATUS: Record<string, { label: string; color: string; bg: string }> = {

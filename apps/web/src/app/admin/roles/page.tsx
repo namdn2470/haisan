@@ -5,7 +5,7 @@ import {
   Plus, Edit2, Trash2, ShieldCheck, Check, X, AlertTriangle,
   Eye, Search, Shield, ShieldOff, Loader2,
 } from 'lucide-react';
-import { useToast, useConfirm } from '../layout';
+import { useToast, useConfirm } from '../layout-client';
 import {
   fetchRoles, fetchPermissions, createRole, updateRole, deleteRole,
 } from '@/lib/admin/api';

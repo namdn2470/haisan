@@ -33,6 +33,13 @@ export class PromotionsController {
     return apiResponse(result, 'Lấy thông tin mã khuyến mãi thành công');
   }
 
+  @Public()
+  @Post('validate')
+  async validate(@Body() body: { code: string; subtotal: number }) {
+    const result = await this.service.validate(body.code, body.subtotal);
+    return apiResponse(result, 'Xác thực mã khuyến mãi thành công');
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const result = await this.service.findOne(id);
