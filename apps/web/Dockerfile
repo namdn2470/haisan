@@ -42,6 +42,7 @@ RUN pnpm --filter @hsbx/web run build
 # ---------------------------------------------------------------
 FROM node:22-alpine AS production
 ENV NODE_ENV=production
+ENV API_INTERNAL_URL=http://api:3001
 WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup

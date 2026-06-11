@@ -96,6 +96,8 @@ services:
     image: namdn2470/seafool-web:latest
     container_name: hsbx_web_prod
     restart: always
+    environment:
+      API_INTERNAL_URL: http://api:3001
     ports:
       - "8082:3000"
     depends_on:
