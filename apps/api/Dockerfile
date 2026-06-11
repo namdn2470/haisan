@@ -45,7 +45,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # openssl cần thiết cho Prisma
-RUN apk add --no-cache openssl postgresql-client
+RUN apk add --no-cache openssl postgresql-client bash
 
 # Tạo user không có quyền root để chạy app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
