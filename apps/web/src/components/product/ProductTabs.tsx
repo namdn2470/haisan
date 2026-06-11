@@ -44,15 +44,16 @@ function ReviewsTab({ reviews }: { reviews: Review[] }) {
 function DetailsTab({
   name, description, shortDescription, imageUrl,
 }: {
-  name: string; description?: string | null; shortDescription?: string | null; imageUrl?: string;
+  name?: string | null; description?: string | null; shortDescription?: string | null; imageUrl?: string;
 }) {
+  const safeName = (typeof name === 'string' && name.trim()) ? name : 'Sản phẩm hải sản';
   const descText = description || shortDescription || 'Hải sản tươi sống, chất lượng cao, đánh bắt mỗi ngày.';
   const tipImage = imageUrl || img('prod-ghe.jpg');
-  const productType = name.toLowerCase().split(' ')[0];
+  const productType = safeName.toLowerCase().split(' ')[0];
 
   return (
     <div>
-      <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{name}</h3>
+      <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{safeName}</h3>
       <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 16 }}>
         {descText}
       </p>
@@ -112,7 +113,7 @@ const SIDEBAR_ITEMS = [
 export default function ProductTabs({
   name, description, shortDescription, reviews, imageUrl,
 }: {
-  name: string; description?: string | null; shortDescription?: string | null;
+  name?: string | null; description?: string | null; shortDescription?: string | null;
   reviews: Review[]; imageUrl?: string;
 }) {
   const [activeTab, setActiveTab] = useState(0);

@@ -1,8 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PrismaService } from '@hsbx/db';
 
 @Injectable()
 export class ProductsService {
+  private readonly logger = new Logger(ProductsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   private normalizeSort(sort?: string) {
@@ -29,7 +31,6 @@ export class ProductsService {
 
     if (filters.publicOnly) {
       where.status = 'ACTIVE';
-      where.inventory = { some: { quantity: { gt: 0 } } };
     } else if (!filters.all) {
       if (filters.status) {
         where.status = filters.status;
@@ -43,10 +44,16 @@ export class ProductsService {
     }
 
     if (filters.search) {
+      // Also try space→hyphen form so "ca nam" matches slug "ca-nam"
+      const slugifiedSearch = filters.search.replace(/\s+/g, '-');
       where.OR = [
         { name: { contains: filters.search, mode: 'insensitive' } },
         { slug: { contains: filters.search, mode: 'insensitive' } },
+        { slug: { contains: slugifiedSearch, mode: 'insensitive' } },
         { shortDescription: { contains: filters.search, mode: 'insensitive' } },
+        { description: { contains: filters.search, mode: 'insensitive' } },
+        { category: { name: { contains: filters.search, mode: 'insensitive' } } },
+        { category: { slug: { contains: filters.search, mode: 'insensitive' } } },
       ];
     }
 
@@ -116,7 +123,7 @@ export class ProductsService {
     });
     if (!data) throw new NotFoundException('Product not found');
     if (publicOnly && data.status !== 'ACTIVE') throw new NotFoundException('Product not found');
-    return { data };
+    return data;
   }
 
   async findOne(id: string) {
@@ -130,7 +137,7 @@ export class ProductsService {
       },
     });
     if (!data) throw new NotFoundException('Product not found');
-    return { data };
+    return data;
   }
 
   async findAllForAdmin(filters: {
@@ -144,6 +151,19 @@ export class ProductsService {
     bestSeller?: boolean;
   }) {
     return this.findAll({ ...filters, all: true });
+  }
+
+  private normalizeUnit(unit: string | undefined | null): string | undefined {
+    if (!unit) return undefined;
+    const map: Record<string, string> = {
+      kg: 'KG', KG: 'KG',
+      con: 'CON', CON: 'CON',
+      combo: 'COMBO', COMBO: 'COMBO',
+      hop: 'HOP', HOP: 'HOP',
+      // Vietnamese with diacritics — legacy/typo-proof
+      hộp: 'HOP', hộP: 'HOP',
+    };
+    return map[unit] ?? unit.toUpperCase();
   }
 
   private slugify(text: string) {
@@ -169,7 +189,7 @@ export class ProductsService {
     set('description', dto.description ?? dto.shortDescription ?? dto.short_description ?? (partial ? undefined : null));
     set('origin', dto.origin ?? (partial ? undefined : null));
     set('storageInstruction', dto.storageInstruction ?? dto.storage_instruction ?? (partial ? undefined : null));
-    set('unit', dto.unit ?? (partial ? undefined : 'KG'));
+    set('unit', this.normalizeUnit(dto.unit) ?? (partial ? undefined : 'KG'));
     const basePrice = dto.basePrice ?? dto.base_price;
     const oldPrice = dto.oldPrice ?? dto.old_price;
     set('basePrice', basePrice !== undefined ? Number(basePrice) : partial ? undefined : 0);
@@ -187,6 +207,9 @@ export class ProductsService {
     if (!dto.name) {
       throw new BadRequestException('Tên sản phẩm là bắt buộc');
     }
+    if (!dto.categoryId) {
+      throw new BadRequestException('Danh mục là bắt buộc');
+    }
 
     const slug = dto.slug || this.slugify(dto.name);
     const existing = await this.prisma.product.findUnique({ where: { slug } });
@@ -194,43 +217,66 @@ export class ProductsService {
       throw new BadRequestException('Slug đã tồn tại, vui lòng chọn slug khác');
     }
 
-    const images = dto.images || [];
-    const imageUrl = dto.imageUrl || dto.image_url || images.find((i: any) => i.isThumbnail)?.imageUrl || images[0]?.imageUrl;
+    // Strip base64 images — only keep http/https URLs to avoid bloating DB
+    const rawImages: any[] = dto.images || [];
+    const images = rawImages.filter((img: any) => {
+      const url: string = img?.imageUrl || '';
+      return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+    });
+    const imageUrl = dto.imageUrl || dto.image_url
+      || images.find((i: any) => i.isThumbnail)?.imageUrl
+      || images[0]?.imageUrl;
 
     const stockQty = dto.stockQuantity ?? dto.stock_quantity;
     const lowStock = dto.lowStockThreshold ?? dto.low_stock_threshold;
 
-    const data = await this.prisma.product.create({
-      data: {
-        ...this.productData(dto),
-        images: imageUrl ? {
-          create: images.length > 0 ? images.map((img: any, idx: number) => ({
-            imageUrl: img.imageUrl,
-            altText: img.altText || dto.name,
-            isThumbnail: img.isThumbnail ?? idx === 0,
-            sortOrder: idx + 1,
-          })) : [{
-            imageUrl,
-            altText: dto.name,
-            isThumbnail: true,
-            sortOrder: 1,
-          }]
-        } : undefined,
-        inventory: {
-          create: {
-            quantity: stockQty !== undefined ? Number(stockQty) : 0,
-            lowStockThreshold: lowStock !== undefined ? Number(lowStock) : 5,
+    try {
+      const data = await this.prisma.product.create({
+        data: {
+          ...this.productData(dto),
+          images: imageUrl ? {
+            create: images.length > 0 ? images.map((img: any, idx: number) => ({
+              imageUrl: img.imageUrl,
+              altText: img.altText || dto.name,
+              isThumbnail: img.isThumbnail ?? idx === 0,
+              sortOrder: idx + 1,
+            })) : [{
+              imageUrl,
+              altText: dto.name,
+              isThumbnail: true,
+              sortOrder: 1,
+            }]
+          } : undefined,
+          inventory: {
+            create: {
+              quantity: stockQty !== undefined ? Number(stockQty) : 0,
+              lowStockThreshold: lowStock !== undefined ? Number(lowStock) : 5,
+            },
           },
         },
-      },
-      include: { category: true, images: true, variants: true, inventory: true },
-    });
-    return { data };
+        include: { category: true, images: true, variants: true, inventory: true },
+      });
+      return { data };
+    } catch (err: any) {
+      this.logger.error('product.create failed', err?.message, err?.stack);
+      if (err?.code === 'P2002') {
+        throw new BadRequestException('Slug hoặc dữ liệu đã tồn tại, vui lòng thử lại');
+      }
+      if (err?.code === 'P2003' || err?.message?.includes('foreign key')) {
+        throw new BadRequestException('Danh mục không tồn tại');
+      }
+      if (err?.name === 'PrismaClientValidationError') {
+        const hint = err.message?.split('\n').slice(-3).join(' ').trim();
+        throw new BadRequestException(`Dữ liệu không hợp lệ: ${hint || err.message}`);
+      }
+      if (err instanceof BadRequestException || err instanceof NotFoundException) throw err;
+      throw new InternalServerErrorException('Không thể tạo sản phẩm, vui lòng thử lại');
+    }
   }
 
   async update(id: string, dto: any) {
     const product = await this.prisma.product.findUnique({ where: { id } });
-    if (!product) throw new NotFoundException('Product not found');
+    if (!product) throw new NotFoundException('Không tìm thấy sản phẩm');
 
     if (dto.slug && dto.slug !== product.slug) {
       const existing = await this.prisma.product.findUnique({ where: { slug: dto.slug } });
@@ -241,40 +287,58 @@ export class ProductsService {
 
     const productData = this.productData(dto, true);
 
-    const data = await this.prisma.product.update({
-      where: { id },
-      data: productData,
-      include: { category: true, images: { orderBy: { sortOrder: 'asc' } }, variants: true, inventory: true },
-    });
-
-    const stockQty = dto.stockQuantity ?? dto.stock_quantity;
-    const lowStock = dto.lowStockThreshold ?? dto.low_stock_threshold;
-    if (stockQty !== undefined || lowStock !== undefined) {
-      const existingInv = await this.prisma.inventory.findFirst({ where: { productId: id, variantId: null } });
-      const inventoryData: any = {};
-      if (stockQty !== undefined) inventoryData.quantity = Number(stockQty);
-      if (lowStock !== undefined) inventoryData.lowStockThreshold = Number(lowStock);
-      if (existingInv) {
-        await this.prisma.inventory.update({ where: { id: existingInv.id }, data: inventoryData });
-      } else {
-        await this.prisma.inventory.create({ data: { productId: id, ...inventoryData } });
-      }
-    }
-
-    if (dto.images && Array.isArray(dto.images)) {
-      await this.prisma.productImage.deleteMany({ where: { productId: id } });
-      await this.prisma.productImage.createMany({
-        data: dto.images.map((img: any, idx: number) => ({
-          productId: id,
-          imageUrl: img.imageUrl,
-          altText: img.altText || dto.name || data.name,
-          isThumbnail: img.isThumbnail ?? idx === 0,
-          sortOrder: img.sortOrder ?? idx + 1,
-        })),
+    try {
+      const data = await this.prisma.product.update({
+        where: { id },
+        data: productData,
+        include: { category: true, images: { orderBy: { sortOrder: 'asc' } }, variants: true, inventory: true },
       });
-    }
 
-    return this.findOne(id);
+      const stockQty = dto.stockQuantity ?? dto.stock_quantity;
+      const lowStock = dto.lowStockThreshold ?? dto.low_stock_threshold;
+      if (stockQty !== undefined || lowStock !== undefined) {
+        const existingInv = await this.prisma.inventory.findFirst({ where: { productId: id, variantId: null } });
+        const inventoryData: any = {};
+        if (stockQty !== undefined) inventoryData.quantity = Number(stockQty);
+        if (lowStock !== undefined) inventoryData.lowStockThreshold = Number(lowStock);
+        if (existingInv) {
+          await this.prisma.inventory.update({ where: { id: existingInv.id }, data: inventoryData });
+        } else {
+          await this.prisma.inventory.create({ data: { productId: id, ...inventoryData } });
+        }
+      }
+
+      if (dto.images && Array.isArray(dto.images)) {
+        // Strip base64 images — only persist http/https URLs
+        const urlImages = dto.images.filter((img: any) => {
+          const url: string = img?.imageUrl || '';
+          return url.startsWith('http://') || url.startsWith('https://') || url.startsWith('/');
+        });
+        await this.prisma.productImage.deleteMany({ where: { productId: id } });
+        if (urlImages.length > 0) {
+          await this.prisma.productImage.createMany({
+            data: urlImages.map((img: any, idx: number) => ({
+              productId: id,
+              imageUrl: img.imageUrl,
+              altText: img.altText || dto.name || data.name,
+              isThumbnail: img.isThumbnail ?? idx === 0,
+              sortOrder: img.sortOrder ?? idx + 1,
+            })),
+          });
+        }
+      }
+
+      return this.findOne(id);
+    } catch (err: any) {
+      this.logger.error(`product.update(${id}) failed`, err?.message, err?.stack);
+      if (err?.code === 'P2002') throw new BadRequestException('Slug đã tồn tại');
+      if (err?.name === 'PrismaClientValidationError') {
+        const hint = err.message?.split('\n').slice(-3).join(' ').trim();
+        throw new BadRequestException(`Dữ liệu không hợp lệ: ${hint || err.message}`);
+      }
+      if (err instanceof BadRequestException || err instanceof NotFoundException) throw err;
+      throw new InternalServerErrorException('Không thể cập nhật sản phẩm, vui lòng thử lại');
+    }
   }
 
   async updateImages(id: string, images: Array<{ imageUrl: string; isThumbnail?: boolean }>) {

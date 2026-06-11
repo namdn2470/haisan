@@ -1,5 +1,5 @@
 import { api } from '@/lib/api';
-import { unwrapApiList, unwrapApiData } from '@/lib/api-response';
+import { unwrapApiList, unwrapApiData, unwrapApiPage } from '@/lib/api-response';
 
 // ============================================================
 // Types
@@ -134,6 +134,36 @@ export async function getProducts(params?: {
     return unwrapApiList<Product>(res);
   } catch {
     return [];
+  }
+}
+
+export type ProductsPage = {
+  products: Product[];
+  total: number;
+  page: number;
+  totalPages: number;
+};
+
+export async function getProductsPage(params?: {
+  category?: string;
+  search?: string;
+  sort?: string;
+  limit?: number;
+  page?: number;
+}): Promise<ProductsPage> {
+  const normalizedSort = normalizeSort(params?.sort);
+  try {
+    const sp = new URLSearchParams();
+    if (params?.category) sp.set('category', params.category);
+    if (params?.search) sp.set('search', params.search);
+    if (params?.sort) sp.set('sort', normalizedSort);
+    sp.set('limit', String(params?.limit ?? 24));
+    sp.set('page', String(params?.page ?? 1));
+    const res = await api<unknown>(`/api/products?${sp.toString()}`);
+    const paged = unwrapApiPage<Product>(res);
+    return { products: paged.data, total: paged.total, page: paged.page, totalPages: paged.totalPages };
+  } catch {
+    return { products: [], total: 0, page: 1, totalPages: 0 };
   }
 }
 

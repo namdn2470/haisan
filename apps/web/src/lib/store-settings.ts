@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from '@/lib/api';
 import { unwrapApiData } from '@/lib/api-response';
 
 export type PublicStoreSettings = {
@@ -29,7 +30,7 @@ export type PublicStoreSettings = {
 
 export async function getStoreSettings(): Promise<PublicStoreSettings | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const baseUrl = getApiBaseUrl();
     const res = await fetch(`${baseUrl}/api/settings/public`, {
       next: { revalidate: 3600 },
     });

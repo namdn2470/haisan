@@ -22,6 +22,7 @@ import {
   LogOut,
   ChevronDown,
   ChevronUp,
+  Layout,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -58,6 +59,7 @@ const NAV_ITEMS = [
       { href: '/admin/posts', icon: FileText, label: 'Bài viết', badge: null },
       { href: '/admin/banners', icon: Image, label: 'Banner', badge: null },
       { href: '/admin/reviews', icon: Star, label: 'Đánh giá', badge: null },
+      { href: '/admin/home-sections', icon: Layout, label: 'Trang chủ', badge: null },
     ],
   },
   {

@@ -10,7 +10,7 @@ import { useToast, useConfirm } from '../layout-client';
 import {
   fetchProducts, fetchProductById, fetchCategories,
   createProduct, updateProduct, deleteProduct,
-  createCategory,
+  createCategory, uploadImage,
 } from '@/lib/admin/api';
 import ProductModal from '@/components/admin/ProductModal';
 import type { ProductImage, ProductFormData, Category } from '@/components/admin/ProductModal';
@@ -75,7 +75,7 @@ const initialFormData: ProductFormData = {
   description: '',
   basePrice: '',
   oldPrice: '',
-  unit: 'kg',
+  unit: 'KG',
   stockQuantity: '0',
   lowStockThreshold: '10',
   status: 'ACTIVE',
@@ -124,7 +124,13 @@ export default function ProductsPage() {
         page,
         limit,
       });
-      setProducts(result.data || []);
+      // API returns inventory[] array — map to flat fields for admin display
+      const mapped = (result.data || []).map((p: any) => ({
+        ...p,
+        stockQuantity: Number(p.inventory?.[0]?.quantity ?? p.stockQuantity ?? 0),
+        lowStockThreshold: Number(p.inventory?.[0]?.lowStockThreshold ?? p.lowStockThreshold ?? 10),
+      }));
+      setProducts(mapped);
       setTotal(result.total || 0);
     } catch (err: any) {
       setError(err.message || 'Không thể tải danh sách sản phẩm');
@@ -184,9 +190,9 @@ export default function ProductsPage() {
         description: fullProduct.description || '',
         basePrice: String(fullProduct.basePrice || ''),
         oldPrice: String(fullProduct.oldPrice || ''),
-        unit: fullProduct.unit || 'kg',
-        stockQuantity: String(fullProduct.stockQuantity ?? 0),
-        lowStockThreshold: String(fullProduct.lowStockThreshold ?? 10),
+        unit: fullProduct.unit || 'KG',
+        stockQuantity: String(fullProduct.stockQuantity ?? fullProduct.inventory?.[0]?.quantity ?? 0),
+        lowStockThreshold: String(fullProduct.lowStockThreshold ?? fullProduct.inventory?.[0]?.lowStockThreshold ?? 10),
         status: fullProduct.status || 'ACTIVE',
         isFeatured: fullProduct.isFeatured || false,
         isBestSeller: fullProduct.isBestSeller || false,
@@ -211,8 +217,7 @@ export default function ProductsPage() {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
-    const MAX_SIZE = 2 * 1024 * 1024; // 2MB
+    const MAX_SIZE = 2 * 1024 * 1024;
     Array.from(files).forEach(file => {
       if (file.size > MAX_SIZE) {
         showError(`Ảnh "${file.name}" vượt quá 2MB. Vui lòng chọn ảnh nhỏ hơn.`);
@@ -274,6 +279,23 @@ export default function ProductsPage() {
 
     setFormLoading(true);
     try {
+      // Upload any base64 previews to get real URLs before saving
+      const uploadedImages = await Promise.all(
+        formData.images.map(async (img, idx) => {
+          if (!img.imageUrl.startsWith('data:')) {
+            return { imageUrl: img.imageUrl, isThumbnail: img.isThumbnail ?? idx === 0, altText: formData.name, sortOrder: idx + 1 };
+          }
+          const [header, b64] = img.imageUrl.split(',');
+          const mime = header.match(/:(.*?);/)?.[1] || 'image/jpeg';
+          const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+          const ext = mime.split('/')[1] || 'jpg';
+          const file = new File([bytes], `upload.${ext}`, { type: mime });
+          const url = await uploadImage(file);
+          if (!url) throw new Error('Không thể upload ảnh. Vui lòng thử lại.');
+          return { imageUrl: url, isThumbnail: img.isThumbnail ?? idx === 0, altText: formData.name, sortOrder: idx + 1 };
+        })
+      );
+
       const payload = {
         name: formData.name.trim(),
         slug: formData.slug.trim() || slugify(formData.name),
@@ -290,12 +312,7 @@ export default function ProductsPage() {
         isBestSeller: formData.isBestSeller,
         seoTitle: formData.seoTitle.trim() || null,
         seoDescription: formData.seoDescription.trim() || null,
-        images: formData.images.map((img, idx) => ({
-          imageUrl: img.imageUrl,
-          isThumbnail: img.isThumbnail ?? idx === 0,
-          altText: formData.name,
-          sortOrder: idx + 1,
-        })),
+        images: uploadedImages,
       };
 
       if (editingProduct) {

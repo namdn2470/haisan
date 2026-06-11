@@ -1,0 +1,46 @@
+# Dependencies (re-installed fresh in each stage)
+node_modules
+.pnpm-store
+
+# Build outputs (re-built in each stage)
+dist
+.next
+.turbo
+*.tsbuildinfo
+
+# User-uploaded files (mounted as Docker volume)
+apps/api/public/uploads
+
+# Mobile app (not containerized)
+apps/mobile
+
+# Local env files (injected at runtime via --env-file or Compose)
+.env
+.env.local
+.env.*.local
+apps/**/.env
+packages/**/.env
+
+# Logs & OS artifacts
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.code-workspace
+
+# Test & coverage
+coverage
+**/*.test.ts
+**/*.spec.ts
+
+# Git
+.git
+.gitignore
+
+# Docs
+docs
+*.md

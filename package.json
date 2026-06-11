@@ -3,21 +3,19 @@
   "version": "3.0.0",
   "private": true,
   "scripts": {
-    "dev": "turbo dev --filter=@hsbx/web --filter=@hsbx/api",
-    "dev:web": "turbo dev --filter=@hsbx/web",
-    "dev:api": "turbo dev --filter=@hsbx/api",
-    "dev:full": "turbo dev --filter=@hsbx/web --filter=@hsbx/api",
+    "dev": "node scripts/kill-dev-ports.mjs && turbo dev --filter=@hsbx/web --filter=@hsbx/api",
+    "dev:web": "node scripts/kill-dev-ports.mjs 3012 && turbo dev --filter=@hsbx/web",
+    "dev:api": "node scripts/kill-dev-ports.mjs 3001 && turbo dev --filter=@hsbx/api",
     "dev:mobile": "turbo dev --filter=@hsbx/mobile",
+    "dev:clean": "node scripts/kill-dev-ports.mjs && rm -rf apps/web/.next .turbo && turbo dev --filter=@hsbx/web --filter=@hsbx/api",
+    "kill:dev": "node scripts/kill-dev-ports.mjs",
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css}\"",
     "db:migrate": "pnpm --filter @hsbx/db run db:migrate",
     "db:seed": "pnpm --filter @hsbx/db run db:seed",
     "db:studio": "pnpm --filter @hsbx/db run db:studio",
-    "clean": "turbo clean && rm -rf node_modules",
-    "kill:web": "bash scripts/kill-web-port.sh",
-    "clean:web": "rm -rf apps/web/.next .turbo",
-    "dev:clean": "pnpm run kill:web && pnpm run clean:web && pnpm run dev"
+    "clean": "turbo clean && rm -rf node_modules"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

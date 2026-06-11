@@ -77,10 +77,10 @@ const STATUS_OPTIONS = [
 ];
 
 const UNIT_OPTIONS = [
-  { value: 'kg', label: 'Kg' },
-  { value: 'con', label: 'Con' },
-  { value: 'hộp', label: 'Hộp' },
-  { value: 'combo', label: 'Combo' },
+  { value: 'KG', label: 'Kg' },
+  { value: 'CON', label: 'Con' },
+  { value: 'HOP', label: 'Hộp' },
+  { value: 'COMBO', label: 'Combo' },
 ];
 
 // ─── Section header ────────────────────────────────────────────────────────────

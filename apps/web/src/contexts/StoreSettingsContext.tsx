@@ -49,19 +49,8 @@ export function useStoreSettings() {
 
 async function fetchPublicSettings(): Promise<StoreSettingsData | null> {
   try {
-    const base = (() => {
-      if (typeof window !== 'undefined') {
-        const prot = window.location.protocol;
-        const host = window.location.host;
-        if (host.includes(':3000') || host.includes(':3012')) {
-          return 'http://localhost:3001';
-        }
-        return `${prot}//${host}`;
-      }
-      return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    })();
-
-    const res = await fetch(`${base}/api/settings/public`, {
+    // Dùng relative URL — browser gọi cùng origin, Next.js proxy chuyển đến API
+    const res = await fetch(`/api/settings/public`, {
       credentials: 'include',
       cache: 'no-store',
     });

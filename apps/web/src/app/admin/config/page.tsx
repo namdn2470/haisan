@@ -419,35 +419,40 @@ export default function AdminConfigPage() {
   const fetchConfigs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getAllConfigs();
-      if (res.ok) {
-        const data = await res.json();
-        setConfigs(data);
-        setOriginalConfigs(data);
-      }
+      const data = await getAllConfigs();
+      const list: SiteConfig[] = Array.isArray(data) ? data : [];
+      setConfigs(list);
+      setOriginalConfigs(list);
     } catch (error) {
       console.error('Failed to fetch configs:', error);
+      toast.error('Không thể tải cấu hình');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchConfigs();
   }, [fetchConfigs]);
 
   const handleChange = (key: string, value: string) => {
-    setConfigs(prev => prev.map(c => c.key === key ? { ...c, value } : c));
+    setConfigs(prev => {
+      const exists = prev.some(c => c.key === key);
+      if (exists) return prev.map(c => c.key === key ? { ...c, value } : c);
+      const type = value === 'true' || value === 'false' ? 'boolean'
+        : (value !== '' && !isNaN(Number(value)) ? 'number' : 'string');
+      return [...prev, { id: '', key, value, type, group: activeSection, label: key, description: null, isPublic: true }];
+    });
     setHasChanges(true);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // Find changed configs
+      // Include both changed configs AND new configs not yet in DB
       const changedConfigs = configs.filter(cfg => {
         const original = originalConfigs.find(o => o.key === cfg.key);
-        return original && original.value !== cfg.value;
+        return !original || original.value !== cfg.value;
       });
 
       if (changedConfigs.length === 0) {
@@ -455,7 +460,7 @@ export default function AdminConfigPage() {
         return;
       }
 
-      const res = await batchUpdateConfigs(changedConfigs.map(c => ({
+      await batchUpdateConfigs(changedConfigs.map(c => ({
         key: c.key,
         value: c.value,
         type: c.type,
@@ -464,15 +469,11 @@ export default function AdminConfigPage() {
         description: c.description ?? undefined,
       })));
 
-      if (res.ok) {
-        setOriginalConfigs(configs);
-        setHasChanges(false);
-        toast.success(`Đã lưu ${changedConfigs.length} cấu hình`);
-      } else {
-        throw new Error('Save failed');
-      }
-    } catch {
-      toast.error('Không thể lưu cấu hình');
+      setOriginalConfigs(configs);
+      setHasChanges(false);
+      toast.success(`Đã lưu ${changedConfigs.length} cấu hình`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Không thể lưu cấu hình');
     } finally {
       setSaving(false);
     }
@@ -480,13 +481,12 @@ export default function AdminConfigPage() {
 
   const handleInitialize = async () => {
     try {
-      const res = await initializeConfigs();
-      if (res.ok) {
-        toast.success('Đã khởi tạo cấu hình mặc định');
-        fetchConfigs();
-      }
-    } catch {
-      toast.error('Không thể khởi tạo cấu hình');
+      await initializeConfigs();
+      toast.success('Đã khởi tạo cấu hình mặc định');
+      setHasChanges(false);
+      await fetchConfigs();
+    } catch (err: any) {
+      toast.error(err?.message || 'Không thể khởi tạo cấu hình');
     }
   };
 

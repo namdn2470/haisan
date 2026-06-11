@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Search, Eye, Check, X, AlertTriangle,
-  Printer, Filter, Download,
+  Printer, Filter, Download, MoreHorizontal,
   ChevronLeft, ChevronRight, Clock, User, Package,
   CreditCard, Truck, FileText, RefreshCw,
 } from 'lucide-react';
@@ -53,6 +53,15 @@ const STATUS_TRANSITIONS: Partial<Record<OrderStatusKey, OrderStatusKey[]>> = {
   COMPLETED: [],
   CANCELLED: [],
   RETURNED: [],
+};
+
+// Action labels for transition buttons
+const TRANSITION_ACTION_LABELS: Partial<Record<OrderStatusKey, string>> = {
+  CONFIRMED: 'Xác nhận đơn',
+  PREPARING: 'Chuyển sang chuẩn bị',
+  DELIVERING: 'Chuyển sang đang giao',
+  COMPLETED: 'Hoàn tất đơn hàng',
+  CANCELLED: 'Hủy đơn hàng',
 };
 
 function formatCurrency(amount: number): string {
@@ -151,6 +160,15 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState<'info' | 'products' | 'history'>('info');
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [adminNote, setAdminNote] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  // Close row dropdown on outside click
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = () => setOpenMenuId(null);
+    document.addEventListener('click', handler, { capture: true, once: true });
+    return () => document.removeEventListener('click', handler, { capture: true });
+  }, [openMenuId]);
 
   const limit = 10;
 
@@ -203,38 +221,47 @@ export default function OrdersPage() {
   const handleUpdateStatus = async (orderId: string, newStatus: keyof typeof ORDER_STATUS) => {
     const newStatusInfo = ORDER_STATUS[newStatus] || { label: newStatus };
     const isCancel = newStatus === 'CANCELLED';
+    const isComplete = newStatus === 'COMPLETED';
+    const needsConfirm = isCancel || isComplete;
+    const actionLabel = TRANSITION_ACTION_LABELS[newStatus] || `Cập nhật thành "${newStatusInfo.label}"`;
 
-    confirm({
-      title: isCancel ? 'Hủy đơn hàng' : 'Cập nhật trạng thái',
-      message: isCancel
-        ? 'Bạn có chắc muốn hủy đơn hàng này? Hành động này không thể hoàn tác.'
-        : `Cập nhật trạng thái đơn hàng thành "${newStatusInfo.label}"?`,
-      confirmText: isCancel ? 'Hủy đơn' : 'Cập nhật',
-      cancelText: 'Không',
-      type: isCancel ? 'danger' : 'warning',
-      onConfirm: async () => {
-        setUpdatingStatus(true);
-        try {
-          await updateOrderStatus(orderId, newStatus);
-          success(`Cập nhật trạng thái thành "${newStatusInfo.label}" thành công`);
-          // Refresh orders list
-          loadOrders();
-          // Refresh selected order
-          if (selectedOrder?.id === orderId) {
-            const [orderRes, history] = await Promise.all([
-              fetchOrderById(orderId),
-              fetchOrderHistory(orderId),
-            ]);
-            // adminFetch unwraps { data: order } → orderRes is the order object directly
-            setSelectedOrder({ ...(orderRes.data ?? orderRes), statusHistory: history });
-          }
-        } catch (err: any) {
-          showError(err.message || 'Không thể cập nhật trạng thái');
-        } finally {
-          setUpdatingStatus(false);
+    const doUpdate = async () => {
+      setUpdatingStatus(true);
+      try {
+        await updateOrderStatus(orderId, newStatus);
+        success(`${actionLabel} thành công`);
+        // Optimistic update in list
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, orderStatus: newStatus } : o));
+        // Refresh selected order panel if open
+        if (selectedOrder?.id === orderId) {
+          const [orderRes, history] = await Promise.all([
+            fetchOrderById(orderId),
+            fetchOrderHistory(orderId),
+          ]);
+          setSelectedOrder({ ...(orderRes.data ?? orderRes), statusHistory: history });
         }
-      },
-    });
+      } catch (err: any) {
+        showError(err.message || 'Không thể cập nhật trạng thái');
+        loadOrders(); // Revert optimistic update on error
+      } finally {
+        setUpdatingStatus(false);
+      }
+    };
+
+    if (needsConfirm) {
+      confirm({
+        title: isCancel ? 'Hủy đơn hàng' : 'Hoàn tất đơn hàng',
+        message: isCancel
+          ? 'Bạn có chắc muốn hủy đơn hàng này? Hành động này không thể hoàn tác.'
+          : 'Xác nhận đơn hàng đã giao thành công và hoàn tất?',
+        confirmText: isCancel ? 'Hủy đơn' : 'Hoàn tất',
+        cancelText: 'Không',
+        type: isCancel ? 'danger' : 'warning',
+        onConfirm: doUpdate,
+      });
+    } else {
+      await doUpdate();
+    }
   };
 
   const handleUpdateNote = async () => {
@@ -553,14 +580,59 @@ export default function OrdersPage() {
                         {formatDate(order.createdAt)}
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                          <button
-                            className="adm-action-trigger"
-                            title="Xem chi tiết"
-                            onClick={() => handleViewDetail(order.id)}
-                          >
-                            <Eye size={16} />
-                          </button>
+                        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button
+                              className="adm-action-trigger"
+                              title="Xem chi tiết"
+                              onClick={() => handleViewDetail(order.id)}
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              className="adm-action-trigger"
+                              title="Thao tác"
+                              onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === order.id ? null : order.id); }}
+                            >
+                              <MoreHorizontal size={15} />
+                            </button>
+                          </div>
+                          {openMenuId === order.id && (
+                            <div
+                              onClick={e => e.stopPropagation()}
+                              style={{
+                                position: 'absolute', top: '100%', right: 0, zIndex: 50,
+                                background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8,
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.12)', minWidth: 190,
+                                padding: '4px 0', marginTop: 4,
+                              }}
+                            >
+                              <button
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#374151', textAlign: 'left' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                onClick={() => { setOpenMenuId(null); handleViewDetail(order.id); }}
+                              >
+                                <Eye size={13} color="#0891b2" /> Xem chi tiết
+                              </button>
+                              {(STATUS_TRANSITIONS[order.orderStatus as OrderStatusKey] || []).map(nextStatus => {
+                                const isCancel = nextStatus === 'CANCELLED';
+                                const label = TRANSITION_ACTION_LABELS[nextStatus] || ORDER_STATUS[nextStatus]?.label || nextStatus;
+                                return (
+                                  <button
+                                    key={nextStatus}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 14px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: isCancel ? '#ef4444' : '#374151', textAlign: 'left' }}
+                                    onMouseEnter={e => (e.currentTarget.style.background = isCancel ? '#fef2f2' : '#f8fafc')}
+                                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                    onClick={() => { setOpenMenuId(null); handleUpdateStatus(order.id, nextStatus); }}
+                                  >
+                                    {isCancel ? <X size={13} color="#ef4444" /> : <Check size={13} color="#059669" />}
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>

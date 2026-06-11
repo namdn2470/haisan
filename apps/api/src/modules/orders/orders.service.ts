@@ -104,11 +104,11 @@ export class OrdersService {
     if (!data) {
       throw new NotFoundException('Order not found');
     }
-    return { data };
+    return data;
   }
 
   async findByOrderCode(orderCode?: string) {
-    if (!orderCode) return { data: [] };
+    if (!orderCode) return [];
 
     const orders = await this.prisma.order.findMany({
       where: {
@@ -121,7 +121,7 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return { data: orders };
+    return orders;
   }
 
   async create(userId: string | undefined, dto: any) {
@@ -269,7 +269,7 @@ export class OrdersService {
       },
     });
 
-    return { data: order };
+    return order;
   }
 
   async updateStatus(id: string, status: string, note?: string, actorName?: string) {
@@ -307,7 +307,7 @@ export class OrdersService {
       },
     });
 
-    return { data };
+    return data;
   }
 
   async updateNote(id: string, note: string) {
@@ -315,7 +315,7 @@ export class OrdersService {
       where: { id },
       data: { adminNote: note },
     });
-    return { data };
+    return data;
   }
 
   async getStatusHistory(id: string) {

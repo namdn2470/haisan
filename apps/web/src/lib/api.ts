@@ -37,10 +37,12 @@ export type AuthSession = {
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.trim() || 'http://localhost:3001';
 
 export function getApiBaseUrl(): string {
-  if (typeof window === 'undefined') return API_BASE_URL;
-  const stored = localStorage.getItem('api_base');
-  if (stored && stored.trim()) return stored.trim();
-  return API_BASE_URL;
+  if (typeof window === 'undefined') {
+    // Server-side: dùng API_INTERNAL_URL (http://api:3001 trong Docker)
+    return process.env.API_INTERNAL_URL || API_BASE_URL;
+  }
+  // Client-side: dùng relative URL → hoạt động mọi port qua Next.js proxy
+  return '';
 }
 
 function decodeJwtExpiry(token: string): number | null {
@@ -102,7 +104,8 @@ export async function api<T = unknown>(
   const { timeout: _timeout, ...fetchOpts } = opts ?? {};
 
   const baseUrl = getApiBaseUrl();
-  if (!baseUrl) {
+  // baseUrl === '' is valid (client-side relative URL via Next.js proxy)
+  if (typeof window === 'undefined' && !baseUrl) {
     const offlineErr: ApiError = new Error('API backend is not configured.');
     offlineErr.status = 0;
     throw offlineErr;

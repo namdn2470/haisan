@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '@hsbx/db';
+import { PrismaService, Prisma } from '@hsbx/db';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -19,27 +19,48 @@ export class StaffService {
     const { search, role, status, page = 1, limit = 15 } = params;
     const skip = (page - 1) * limit;
 
-    const where: any = {
-      role: { in: this.STAFF_ROLES },
-    };
-    if (role) where.role = role;
-    if (status) where.status = status;
-    if (search) {
-      where.OR = [
-        { fullName: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-      ];
+    // Use $queryRaw to bypass Prisma client enum caching issues
+    let whereClause = 'WHERE p.role IN ($1, $2, $3, $4, $5)';
+    const queryParams: any[] = ['MANAGER', 'ADMIN', 'STAFF', 'SHIPPER', 'SUPER_ADMIN'];
+    let paramIdx = 6;
+
+    if (role) {
+      whereClause = `WHERE p.role = $${paramIdx}`;
+      queryParams.push(role);
+      paramIdx++;
     }
 
-    const [data, total] = await Promise.all([
-      this.prisma.profile.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.profile.count({ where }),
+    if (status) {
+      whereClause += ` AND p.status = $${paramIdx}`;
+      queryParams.push(status);
+      paramIdx++;
+    }
+
+    if (search) {
+      whereClause += ` AND (p.full_name ILIKE $${paramIdx} OR p.phone ILIKE $${paramIdx} OR p.email ILIKE $${paramIdx})`;
+      queryParams.push(`%${search}%`);
+      paramIdx++;
+    }
+
+    const [data, totalResult] = await Promise.all([
+      this.prisma.$queryRaw<any[]>`
+        SELECT p.id, p.full_name as "fullName", p.phone, p.email, p.role, p.status,
+               p.avatar_url as "avatarUrl", p.created_at as "createdAt", p.updated_at as "updatedAt"
+        FROM profiles p
+        WHERE p.role IN ('MANAGER','ADMIN','STAFF','SHIPPER','SUPER_ADMIN')
+          ${role ? Prisma.sql`AND p.role = ${role}` : Prisma.sql``}
+          ${status ? Prisma.sql`AND p.status = ${status}` : Prisma.sql``}
+          ${search ? Prisma.sql`AND (p.full_name ILIKE ${`%${search}%`} OR p.phone ILIKE ${`%${search}%`} OR p.email ILIKE ${`%${search}%`})` : Prisma.sql``}
+        ORDER BY p.created_at DESC
+        LIMIT ${limit} OFFSET ${skip}
+      `,
+      this.prisma.$queryRaw<[{ count: bigint }]>`
+        SELECT COUNT(*) as count FROM profiles p
+        WHERE p.role IN ('MANAGER','ADMIN','STAFF','SHIPPER','SUPER_ADMIN')
+          ${role ? Prisma.sql`AND p.role = ${role}` : Prisma.sql``}
+          ${status ? Prisma.sql`AND p.status = ${status}` : Prisma.sql``}
+          ${search ? Prisma.sql`AND (p.full_name ILIKE ${`%${search}%`} OR p.phone ILIKE ${`%${search}%`} OR p.email ILIKE ${`%${search}%`})` : Prisma.sql``}
+      `,
     ]);
 
     const mapped = data.map(p => ({
@@ -53,6 +74,8 @@ export class StaffService {
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
     }));
+
+    const total = Number(totalResult[0]?.count ?? 0);
 
     return {
       data: mapped,

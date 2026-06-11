@@ -85,7 +85,9 @@ function normalizeOrder(raw: any): Order {
         unitPrice,
         lineTotal: Number(item.lineTotal ?? item.line_total ?? item.totalPrice ?? item.total_price ?? unitPrice * quantity),
         variantName: item.variantName || item.variant_name,
-        imageUrl: item.imageUrl || item.image_url,
+        imageUrl: item.imageUrl || item.image_url
+          || item.product?.images?.find((i: any) => i.isThumbnail)?.imageUrl
+          || item.product?.images?.[0]?.imageUrl,
       };
     }),
   };

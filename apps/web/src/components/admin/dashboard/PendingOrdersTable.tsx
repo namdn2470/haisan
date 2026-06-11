@@ -30,6 +30,8 @@ interface PendingOrdersTableProps {
   page?: number;
   onPageChange?: (page: number) => void;
   loading?: boolean;
+  onConfirm?: (orderId: string) => void;
+  onCancel?: (orderId: string) => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -94,6 +96,8 @@ export default function PendingOrdersTable({
   page = 1,
   onPageChange,
   loading = false,
+  onConfirm,
+  onCancel,
 }: PendingOrdersTableProps) {
   const [activeTab, setActiveTab] = useState('Tất cả');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -203,7 +207,7 @@ export default function PendingOrdersTable({
                         {openMenuId === order.id && (
                           <div className="pot-dropdown">
                             <Link
-                              href={`/admin/orders/${order.id}`}
+                              href="/admin/orders"
                               className="pot-dropdown-item"
                               onClick={() => setOpenMenuId(null)}
                             >
@@ -212,11 +216,17 @@ export default function PendingOrdersTable({
                             </Link>
                             {orderStatus === 'NEW' && (
                               <>
-                                <button className="pot-dropdown-item pot-dropdown-confirm">
+                                <button
+                                  className="pot-dropdown-item pot-dropdown-confirm"
+                                  onClick={() => { setOpenMenuId(null); onConfirm?.(order.id); }}
+                                >
                                   <Check size={13} />
                                   Xác nhận đơn
                                 </button>
-                                <button className="pot-dropdown-item pot-dropdown-cancel">
+                                <button
+                                  className="pot-dropdown-item pot-dropdown-cancel"
+                                  onClick={() => { setOpenMenuId(null); onCancel?.(order.id); }}
+                                >
                                   <X size={13} />
                                   Hủy đơn
                                 </button>

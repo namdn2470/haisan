@@ -245,9 +245,26 @@ export default function BannersPage() {
     if (swapIdx < 0 || swapIdx >= banners.length) return;
 
     const other = banners[swapIdx];
+    let bannerNewOrder: number;
+    let otherNewOrder: number;
+
+    if (banner.sortOrder !== other.sortOrder) {
+      bannerNewOrder = other.sortOrder;
+      otherNewOrder = banner.sortOrder;
+    } else {
+      // Same sortOrder — assign distinct values so the order actually changes
+      if (direction === 'up') {
+        bannerNewOrder = other.sortOrder;
+        otherNewOrder = other.sortOrder + 1;
+      } else {
+        bannerNewOrder = other.sortOrder + 1;
+        otherNewOrder = other.sortOrder;
+      }
+    }
+
     try {
-      await updateBanner(banner.id, { sortOrder: other.sortOrder });
-      await updateBanner(other.id, { sortOrder: banner.sortOrder });
+      await updateBanner(banner.id, { sortOrder: bannerNewOrder });
+      await updateBanner(other.id, { sortOrder: otherNewOrder });
       loadBanners();
     } catch (err: any) {
       showError(err.message || 'Không thể sắp xếp banner');

@@ -10,7 +10,8 @@ import {
   Bell,
   ExternalLink,
 } from 'lucide-react';
-import { fetchDashboardStats, fetchDashboardRevenue, fetchDashboardBestSellers, fetchOrders, fetchNotifications } from '@/lib/admin/api';
+import { fetchDashboardStats, fetchDashboardRevenue, fetchDashboardBestSellers, fetchOrders, fetchNotifications, updateOrderStatus } from '@/lib/admin/api';
+import { useToast } from '../layout-client';
 import DateRangePicker from '@/components/admin/dashboard/DateRangePicker';
 import RevenueLineChart from '@/components/admin/dashboard/RevenueLineChart';
 import OrderStatusDonut from '@/components/admin/dashboard/OrderStatusDonut';
@@ -117,6 +118,7 @@ function StatCard({ label, value, change, icon, gradient }: {
 
 // ——— Main Dashboard ———
 export default function DashboardPage() {
+  const { success, error: showError } = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [revenue, setRevenue] = useState<RevenueData[]>([]);
   const [bestSellers, setBestSellers] = useState<BestSeller[]>([]);
@@ -144,15 +146,15 @@ export default function DashboardPage() {
       ]);
 
       if (statsRes.status === 'fulfilled') {
-        setStats(statsRes.value.data);
+        setStats(statsRes.value);
       }
 
       if (revenueRes.status === 'fulfilled') {
-        setRevenue(revenueRes.value.data || []);
+        setRevenue(Array.isArray(revenueRes.value) ? revenueRes.value : (revenueRes.value?.data || []));
       }
 
       if (bestRes.status === 'fulfilled') {
-        setBestSellers(bestRes.value.data || []);
+        setBestSellers(Array.isArray(bestRes.value) ? bestRes.value : (bestRes.value?.data || []));
       }
 
       if (notifRes.status === 'fulfilled') {
@@ -212,6 +214,30 @@ export default function DashboardPage() {
       console.error('New orders load error:', err);
     }
   }, []);
+
+  const handleConfirmOrder = useCallback(async (orderId: string) => {
+    try {
+      await updateOrderStatus(orderId, 'CONFIRMED');
+      success('Đã xác nhận đơn hàng');
+      loadDashboard();
+      loadPendingOrders(pendingPage);
+      loadNewOrders();
+    } catch (err: any) {
+      showError(err.message || 'Không thể xác nhận đơn hàng');
+    }
+  }, [pendingPage, loadDashboard, loadPendingOrders, loadNewOrders, success, showError]);
+
+  const handleCancelOrder = useCallback(async (orderId: string) => {
+    try {
+      await updateOrderStatus(orderId, 'CANCELLED');
+      success('Đã hủy đơn hàng');
+      loadDashboard();
+      loadPendingOrders(pendingPage);
+      loadNewOrders();
+    } catch (err: any) {
+      showError(err.message || 'Không thể hủy đơn hàng');
+    }
+  }, [pendingPage, loadDashboard, loadPendingOrders, loadNewOrders, success, showError]);
 
   useEffect(() => {
     loadDashboard();
@@ -355,6 +381,8 @@ export default function DashboardPage() {
               page={pendingPage}
               onPageChange={setPendingPage}
               loading={pendingLoading}
+              onConfirm={handleConfirmOrder}
+              onCancel={handleCancelOrder}
             />
           </div>
           <div className="db-card-stack">

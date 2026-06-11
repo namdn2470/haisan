@@ -1,0 +1,77 @@
+version: '3.8'
+
+# ================================================================
+# Môi trường LOCAL DEV — build từ source, expose toàn bộ cổng
+# Sử dụng: docker compose -f docker-compose.local.yml up --build
+# ================================================================
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: hsbx_api_local
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      API_PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-hai_san_bien_xanh}
+      DIRECT_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-hai_san_bien_xanh}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    ports:
+      - "3001:3001"
+    volumes:
+      - uploads_data:/app/apps/api/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hsbx_network
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # URL trình duyệt dùng — override bằng NEXT_PUBLIC_API_URL trong .env
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+    container_name: hsbx_web_local
+    restart: unless-stopped
+    environment:
+      # URL nội bộ Docker — web container proxy /api/* đến api container
+      API_INTERNAL_URL: http://api:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - hsbx_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: hsbx_db_local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-hai_san_bien_xanh}
+    ports:
+      - "5433:5432"   # 5432 local đang dùng → dùng 5433 để connect từ host
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hsbx_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  hsbx_network:
+    driver: bridge

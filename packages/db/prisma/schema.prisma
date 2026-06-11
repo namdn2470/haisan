@@ -230,6 +230,7 @@ model Product {
   reviews           Review[]
   favorites         Favorite[]
   processingOptions ProductProcessingOption[]
+  homepageSectionItems HomepageSectionItem[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -724,7 +725,7 @@ model CustomRole {
   description String?
   color       String   @default("#64748b")
   permissions String[] @default([])
-  isActive    Boolean  @default(true)
+  isActive    Boolean  @default(true) @map("is_active")
   isSystem    Boolean  @default(false) @map("is_system")
 
   profiles    Profile[]
@@ -735,6 +736,41 @@ model CustomRole {
   @@index([isActive])
   @@index([slug])
   @@map("custom_roles")
+}
+
+// Homepage Section - Admin-configurable homepage blocks
+model HomepageSection {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique // "today-suggestion" | "frequently-bought"
+  title       String   @default("")
+  subtitle    String?  @db.Text
+  description String?  @db.Text
+  ctaText     String?  @map("cta_text")
+  ctaUrl      String?  @map("cta_url")
+  enabled     Boolean  @default(true)
+  sortOrder   Int      @default(0) @map("sort_order")
+  maxItems    Int      @default(3) @map("max_items")
+
+  items HomepageSectionItem[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("homepage_sections")
+}
+
+model HomepageSectionItem {
+  id        String  @id @default(uuid()) @db.Uuid
+  sectionId String  @map("section_id") @db.Uuid
+  productId String  @map("product_id") @db.Uuid
+  sortOrder Int     @default(0) @map("sort_order")
+
+  section HomepageSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([sectionId, productId])
+  @@index([sectionId])
+  @@map("homepage_section_items")
 }
 
 // Site Configuration - Key-value store for website settings

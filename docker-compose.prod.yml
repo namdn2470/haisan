@@ -1,0 +1,71 @@
+version: '3.8'
+
+# ================================================================
+# Môi trường PRODUCTION — dùng image đã build sẵn
+# Yêu cầu: file .env tại cùng thư mục (copy từ .env.docker.example)
+# Sử dụng: docker compose -f docker-compose.prod.yml up -d
+# ================================================================
+
+services:
+  api:
+    image: ${API_IMAGE:-namdn2470/seafool-api}:${IMAGE_TAG:-latest}
+    platform: linux/amd64
+    container_name: hsbx_api_prod
+    restart: always
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3002:3001"
+    volumes:
+      - uploads_data:/app/apps/api/public/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - hsbx_network
+
+  web:
+    image: ${WEB_IMAGE:-namdn2470/seafool-web}:${IMAGE_TAG:-latest}
+    platform: linux/amd64
+    container_name: hsbx_web_prod
+    restart: always
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://api:3001
+    ports:
+      - "${WEB_PORT:-8082}:3000"
+    depends_on:
+      - api
+    networks:
+      - hsbx_network
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: hsbx_db_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - hsbx_network
+    ports:
+      - "5432:5432"
+    # Mở port 5432 để kết nối DB từ bên ngoài
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  uploads_data:
+
+networks:
+  hsbx_network:
+    driver: bridge

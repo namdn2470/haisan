@@ -7,6 +7,7 @@ import {
   Table, Image,
 } from 'lucide-react';
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { uploadImage } from '@/lib/admin/api';
 
 export interface PostFormData {
   title: string;
@@ -51,6 +52,7 @@ function ImageUploadSection({
   onThumbnailUrlChange,
   onFileUpload,
   dragActive,
+  uploading,
   onDragEnter,
   onDragLeave,
   onDrop,
@@ -61,6 +63,7 @@ function ImageUploadSection({
   onThumbnailUrlChange: (v: string) => void;
   onFileUpload: (files: FileList | null) => void;
   dragActive: boolean;
+  uploading: boolean;
   onDragEnter: () => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
@@ -87,7 +90,8 @@ function ImageUploadSection({
           onDragEnter={onDragEnter}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
-          onClick={onBrowseClick}
+          onClick={uploading ? undefined : onBrowseClick}
+          style={uploading ? { cursor: 'default', opacity: 0.7 } : undefined}
         >
           <input
             ref={fileInputRef}
@@ -96,16 +100,25 @@ function ImageUploadSection({
             style={{ display: 'none' }}
             onChange={(e) => onFileUpload(e.target.files)}
           />
-          <div className="pfm-dropzone__icon">
-            <ImageIcon size={26} strokeWidth={1.5} />
-          </div>
-          <div className="pfm-dropzone__text">
-            <span className="pfm-dropzone__primary">Kéo &amp; thả ảnh vào đây</span>
-            <span className="pfm-dropzone__secondary">
-              hoặc <span className="pfm-dropzone__link">bấm để tải ảnh lên</span>
-            </span>
-          </div>
-          <span className="pfm-dropzone__hint">PNG, JPG, WEBP · tối đa 5MB</span>
+          {uploading ? (
+            <>
+              <Loader2 size={26} className="pfm-spin" style={{ color: '#0ea5e9' }} />
+              <span className="pfm-dropzone__primary">Đang tải ảnh lên...</span>
+            </>
+          ) : (
+            <>
+              <div className="pfm-dropzone__icon">
+                <ImageIcon size={26} strokeWidth={1.5} />
+              </div>
+              <div className="pfm-dropzone__text">
+                <span className="pfm-dropzone__primary">Kéo &amp; thả ảnh vào đây</span>
+                <span className="pfm-dropzone__secondary">
+                  hoặc <span className="pfm-dropzone__link">bấm để tải ảnh lên</span>
+                </span>
+              </div>
+              <span className="pfm-dropzone__hint">PNG, JPG, WEBP · tối đa 5MB</span>
+            </>
+          )}
         </div>
 
         {/* URL input */}
@@ -237,12 +250,24 @@ export default function PostFormModal({
 }: PostFormModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
       setDragActive(false);
+      setUploadingImage(false);
     }
   }, [isOpen]);
+
+  const doUpload = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    setUploadingImage(true);
+    const url = await uploadImage(file);
+    setUploadingImage(false);
+    if (url) {
+      onChange('thumbnailUrl', url);
+    }
+  }, [onChange]);
 
   const handleDragEnter = useCallback(() => setDragActive(true), []);
   const handleDragLeave = useCallback((e: React.DragEvent) => {
@@ -252,16 +277,9 @@ export default function PostFormModal({
     e.preventDefault();
     setDragActive(false);
     if (e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          onChange('thumbnailUrl', ev.target?.result as string);
-        };
-        reader.readAsDataURL(file);
-      }
+      doUpload(e.dataTransfer.files[0]);
     }
-  }, [onChange]);
+  }, [doUpload]);
 
   const handleBrowseClick = () => {
     fileInputRef.current?.click();
@@ -269,13 +287,7 @@ export default function PostFormModal({
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    const file = files[0];
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      onChange('thumbnailUrl', ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    doUpload(files[0]);
   };
 
   if (!isOpen) return null;
@@ -439,6 +451,7 @@ export default function PostFormModal({
                 onThumbnailUrlChange={(v) => onChange('thumbnailUrl', v)}
                 onFileUpload={handleFileUpload}
                 dragActive={dragActive}
+                uploading={uploadingImage}
                 onDragEnter={handleDragEnter}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}

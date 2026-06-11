@@ -24,6 +24,8 @@ import { RolesModule } from './modules/roles/roles.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { ConfigModule } from './modules/config/config.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { UploadModule } from './modules/upload/upload.module';
+import { HomepageSectionsModule } from './modules/homepage-sections/homepage-sections.module';
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { SettingsModule } from './modules/settings/settings.module';
     ReportsModule,
     ConfigModule,
     SettingsModule,
+    UploadModule,
+    HomepageSectionsModule,
   ],
 })
 export class AppModule {}

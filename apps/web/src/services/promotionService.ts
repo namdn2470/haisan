@@ -1,7 +1,7 @@
 'use client';
 
-import { apiClient } from './api-client';
-import type { ApiResponse } from './api-client';
+import { apiClient } from '@/lib/api';
+import type { ApiResponse } from '@/lib/api';
 
 export type Promotion = {
   id?: string;
