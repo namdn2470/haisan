@@ -9,7 +9,7 @@ DB_URL="${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/hai_san_bie
 DB_HOST=$(echo "$DB_URL" | sed -E 's|.*@||' | cut -d':' -f1 | cut -d'/' -f1)
 DB_PORT=$(echo "$DB_URL" | sed -E 's|.*@||' | cut -d':' -f2 | cut -d'/' -f1)
 DB_USER=$(echo "$DB_URL" | sed -E 's|.*://||' | cut -d':' -f1)
-DB_PASS=$(echo "$DB_URL" | sed -E 's|.*://||' | sed -E 's|:@.*||' | sed -E 's|[^:]+:||')
+DB_PASS=$(echo "$DB_URL" | sed -E 's|.*://[^:]+:||' | sed -E 's|@.*||')
 DB_NAME=$(echo "$DB_URL" | sed -E 's|.*/||' | cut -d'?' -f1)
 
 export PGPASSWORD="$DB_PASS"
