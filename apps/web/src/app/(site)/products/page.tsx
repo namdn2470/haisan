@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ChevronDown, ChevronRight, Filter, Search } from 'lucide-react';
-import SiteShell from '@/components/shared/SiteShell';
+
 import ProductCard from '@/components/shared/ProductCard';
 import { getCategories, getProductsPage } from '@/services';
 
@@ -43,11 +43,11 @@ export default function ProductsPage() {
 
 function ProductsLoading() {
   return (
-    <SiteShell>
+    
       <main className="hs-container hs-page-main">
         <div className="hs-products-grid">{[...Array(8)].map((_, i) => <div key={i} className="hs-product-skeleton" />)}</div>
       </main>
-    </SiteShell>
+    
   );
 }
 
@@ -116,7 +116,7 @@ function ProductsPageContent() {
       : 'Tất cả sản phẩm';
 
   return (
-    <SiteShell>
+    
       <main className="hs-container hs-page-main">
         <div className="hs-breadcrumb">
           <Link href="/">Trang chủ</Link>
@@ -198,6 +198,6 @@ function ProductsPageContent() {
           </>
         )}
       </main>
-    </SiteShell>
+    
   );
 }

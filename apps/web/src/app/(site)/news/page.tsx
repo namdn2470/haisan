@@ -1,17 +1,22 @@
 import Link from 'next/link';
 import { CalendarDays, ChevronRight, Newspaper } from 'lucide-react';
-import SiteShell from '@/components/shared/SiteShell';
+
 import { getPublishedPosts, Post } from '@/services/postService';
 import { unwrapApiList } from '@/lib/api-response';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewsPage() {
-  const result = await getPublishedPosts({ limit: 12 });
-  const posts = unwrapApiList<Post>(result);
+  let posts: Post[] = [];
+  try {
+    const result = await getPublishedPosts({ limit: 12 });
+    posts = unwrapApiList<Post>(result);
+  } catch {
+    posts = [];
+  }
 
   return (
-    <SiteShell>
+    
       <main className="hs-container hs-page-main">
         <div className="hs-breadcrumb">
           <Link href="/">Trang chủ</Link>
@@ -63,6 +68,6 @@ export default async function NewsPage() {
           </div>
         )}
       </main>
-    </SiteShell>
+    
   );
 }

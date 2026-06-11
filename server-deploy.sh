@@ -1,12 +1,54 @@
 #!/bin/bash
 # ================================================================
-# server-deploy.sh — Chạy TRỰC TIẾP trên server 14.225.217.232
-# Kéo images từ Docker Hub và khởi động SeaFool
+# server-deploy.sh
+# - Chạy trên Mac  → tự SSH vào server và deploy
+# - Chạy trên Server → pull images và khởi động containers
 # Usage: bash server-deploy.sh
 # ================================================================
+
+SERVER_IP="14.225.217.232"
+SERVER_USER="root"
+SSH_KEY="$HOME/.ssh/id_ed25519"
+DEPLOY_DIR="$HOME/deployment/haisan"
+
+# ── Phát hiện đang chạy trên Mac hay Server ────────────────────
+IS_SERVER=false
+if [[ "$(hostname)" == "k8s-worker-2" ]] || [[ "$SERVER_SIDE" == "1" ]]; then
+  IS_SERVER=true
+fi
+
+if [[ "$IS_SERVER" == "false" ]]; then
+  # ════════════════════════════════════════
+  # ĐANG CHẠY TRÊN MAC → SSH lên server
+  # ════════════════════════════════════════
+  echo "==> Phát hiện đang chạy trên Mac. Kết nối SSH tới $SERVER_USER@$SERVER_IP..."
+
+  SSH_OPTS="-o StrictHostKeyChecking=no -o ConnectTimeout=10"
+  if [[ -f "$SSH_KEY" ]]; then
+    SSH_OPTS="$SSH_OPTS -i $SSH_KEY"
+  fi
+
+  if ! ssh $SSH_OPTS "$SERVER_USER@$SERVER_IP" "echo 'SSH OK'" 2>/dev/null; then
+    echo ""
+    echo "❌ Không kết nối được SSH!"
+    echo "   Kiểm tra key: ssh-copy-id -i ~/.ssh/id_ed25519 root@$SERVER_IP"
+    echo "   Hoặc thêm key thủ công vào /root/.ssh/authorized_keys trên server"
+    exit 1
+  fi
+
+  echo "==> SSH OK — copy script lên server..."
+  scp $SSH_OPTS "$(realpath "$0")" "$SERVER_USER@$SERVER_IP:/tmp/server-deploy.sh"
+
+  echo "==> Chạy deploy trên server..."
+  ssh $SSH_OPTS -t "$SERVER_USER@$SERVER_IP" "SERVER_SIDE=1 bash /tmp/server-deploy.sh"
+  exit $?
+fi
+
+# ════════════════════════════════════════
+# ĐANG CHẠY TRÊN SERVER → Deploy thật
+# ════════════════════════════════════════
 set -e
 
-DEPLOY_DIR=~/deployment/haisan
 API_IMAGE="namdn2470/seafool-api:latest"
 WEB_IMAGE="namdn2470/seafool-web:latest"
 
@@ -15,7 +57,7 @@ mkdir -p "$DEPLOY_DIR"
 cd "$DEPLOY_DIR"
 
 echo "==> Tạo file .env..."
-cat > .env << 'EOF'
+cat > .env << 'ENVEOF'
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 POSTGRES_DB=hai_san_bien_xanh
@@ -28,19 +70,13 @@ JWT_SECRET=dev-secret-seafool-2026
 JWT_EXPIRES_IN=7d
 
 CORS_ORIGINS=http://14.225.217.232:8082,http://14.225.217.232
-
-API_IMAGE=namdn2470/seafool-api
-WEB_IMAGE=namdn2470/seafool-web
-IMAGE_TAG=latest
-WEB_PORT=8082
-EOF
+ENVEOF
 
 echo "==> Tạo docker-compose.yml..."
-cat > docker-compose.yml << 'EOF'
+cat > docker-compose.yml << 'DCEOF'
 services:
   api:
     image: namdn2470/seafool-api:latest
-    platform: linux/amd64
     container_name: hsbx_api_prod
     restart: always
     env_file: .env
@@ -58,15 +94,13 @@ services:
 
   web:
     image: namdn2470/seafool-web:latest
-    platform: linux/amd64
     container_name: hsbx_web_prod
     restart: always
     ports:
       - "8082:3000"
-    environment:
-      API_INTERNAL_URL: http://api:3001
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     networks:
       - hsbx_network
 
@@ -95,12 +129,12 @@ volumes:
 networks:
   hsbx_network:
     driver: bridge
-EOF
+DCEOF
 
-echo "==> Pull images từ Docker Hub (linux/amd64)..."
-docker pull --platform linux/amd64 "$API_IMAGE"
-docker pull --platform linux/amd64 "$WEB_IMAGE"
-docker pull --platform linux/amd64 postgres:16-alpine
+echo "==> Pull images từ Docker Hub..."
+docker pull "$API_IMAGE"
+docker pull "$WEB_IMAGE"
+docker pull postgres:16-alpine
 
 echo "==> Dừng containers cũ (nếu có)..."
 docker compose down 2>/dev/null || true

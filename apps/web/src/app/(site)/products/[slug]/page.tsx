@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { useCart } from '@/lib/cart-store';
 import { getProductBySlug, getProducts } from '@/services';
-import SiteShell from '@/components/shared/SiteShell';
+
 import ProductImageGallery from '@/components/product/ProductImageGallery';
 import ProductInfo from '@/components/product/ProductInfo';
 import ProductPurchaseCard from '@/components/product/ProductPurchaseCard';
@@ -133,11 +133,11 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <SiteShell>
+      
         <div className="hs-container detail-page" style={{ padding: '40px 24px' }}>
           <div className="skeleton-card" style={{ height: 400 }} />
         </div>
-      </SiteShell>
+      
     );
   }
 
@@ -149,7 +149,7 @@ export default function ProductDetailPage() {
   const badgeLabel = product.badge ? (BADGE_MAP[product.badge] || product.badge) : '';
 
   return (
-    <SiteShell>
+    
       <main className="hs-container detail-page">
         <div className="hs-breadcrumb">
           <Link href="/">Trang chủ</Link> <ChevronRight size={14} />
@@ -216,6 +216,6 @@ export default function ProductDetailPage() {
           currentSlug={slug}
         />
       </main>
-    </SiteShell>
+    
   );
 }

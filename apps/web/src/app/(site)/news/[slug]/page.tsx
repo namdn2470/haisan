@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import SiteShell from '@/components/shared/SiteShell';
+
 import { getPostBySlug, getRelatedPosts } from '@/services/postService';
 
 export const dynamic = 'force-dynamic';
@@ -43,7 +43,7 @@ export default async function PostDetailPage({ params }: Props) {
     });
 
   return (
-    <SiteShell>
+    
       <main className="hs-container hs-page-main">
         <nav className="hs-breadcrumb">
           <Link href="/">Trang chủ</Link>
@@ -108,6 +108,6 @@ export default async function PostDetailPage({ params }: Props) {
           </section>
         )}
       </main>
-    </SiteShell>
+    
   );
 }

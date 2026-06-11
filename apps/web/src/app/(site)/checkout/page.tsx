@@ -18,7 +18,7 @@ import {
 import { img } from '@/lib/api';
 import { money } from '@/lib/money';
 import { useCart } from '@/lib/cart-store';
-import SiteShell from '@/components/shared/SiteShell';
+
 import {
   calculatePromotionDiscount,
   createOrder,
@@ -194,7 +194,7 @@ export default function CheckoutPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
 
   return (
-    <SiteShell>
+    
       <main className="hs-container checkout-page">
         <div className="hs-breadcrumb">
           <Link href="/">Trang chủ</Link>
@@ -481,6 +481,6 @@ export default function CheckoutPage() {
           </form>
         )}
       </main>
-    </SiteShell>
+    
   );
 }

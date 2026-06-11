@@ -15,7 +15,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { money } from '@/lib/money';
-import SiteShell from '@/components/shared/SiteShell';
+import { formatPhone } from '@/lib/phone';
+
 import { api, getApiBaseUrl } from '@/lib/api';
 import { unwrapApiData } from '@/lib/api-response';
 import { getOrders } from '@/services/orderService';
@@ -74,7 +75,7 @@ function normalizeOrder(raw: any): OrderInfo {
     orderId: raw.id || raw.orderId || '',
     total: totalAmount,
     customerName: raw.customerName || raw.customer_name || '',
-    customerPhone: raw.customerPhone || raw.customer_phone || '',
+    customerPhone: formatPhone(raw.customerPhone || raw.customer_phone || ''),
     customerEmail: raw.customerEmail || raw.customer_email || '',
     shippingAddressText: raw.shippingAddressText || raw.shipping_address_text || '',
     deliverySlot: raw.deliverySlot || raw.delivery_slot || '',
@@ -338,7 +339,7 @@ function OrderSuccessContent() {
 
 export default function OrderSuccessPage() {
   return (
-    <SiteShell>
+    
       <main className="order-success-container">
         <div className="success-card">
           <div className="success-icon">
@@ -360,7 +361,7 @@ export default function OrderSuccessPage() {
           </Suspense>
         </div>
       </main>
-    </SiteShell>
+    
   );
 }
 

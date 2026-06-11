@@ -185,3 +185,24 @@ export async function getBanners(position?: string): Promise<Banner[]> {
     return [];
   }
 }
+
+export type ShippingZone = {
+  id: string;
+  name: string;
+  province: string | null;
+  district: string | null;
+  shippingFee: number;
+  freeFromAmount: number;
+  estimatedDays: number;
+  isActive: boolean;
+  sortOrder: number;
+};
+
+export async function getPublicShippingZones(): Promise<ShippingZone[]> {
+  try {
+    const res = await api<unknown>('/api/shipping-zones/public');
+    return unwrapApiList<ShippingZone>(res);
+  } catch {
+    return [];
+  }
+}

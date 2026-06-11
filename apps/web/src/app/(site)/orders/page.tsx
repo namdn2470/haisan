@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { money } from '@/lib/money';
 import { getOrders } from '@/services';
-import SiteShell from '@/components/shared/SiteShell';
+
 
 type Order = {
   id: string;
@@ -53,7 +53,7 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <SiteShell>
+      
         <main className="hs-container hs-page-main">
           <div className="oh-loading">
             <div className="oh-skeleton-list">
@@ -61,12 +61,12 @@ export default function OrdersPage() {
             </div>
           </div>
         </main>
-      </SiteShell>
+      
     );
   }
 
   return (
-    <SiteShell>
+    
       <main className="hs-container hs-page-main">
         <section className="hs-page-toolbar">
           <div>
@@ -124,6 +124,6 @@ export default function OrdersPage() {
           </div>
         )}
       </main>
-    </SiteShell>
+    
   );
 }

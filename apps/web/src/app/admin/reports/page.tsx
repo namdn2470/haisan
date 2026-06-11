@@ -7,6 +7,14 @@ import {
   Calendar, ChevronDown, Download, RefreshCw,
 } from 'lucide-react';
 import { useToast } from '../layout-client';
+import {
+  fetchReportSummary,
+  fetchReportRevenue,
+  fetchReportOrders,
+  fetchReportProducts,
+  fetchReportCustomers,
+  fetchReportInventory,
+} from '@/lib/admin/api';
 
 // ——— Types ———
 type TimeRange = 'today' | '7days' | '30days' | 'thisMonth' | 'thisYear' | 'custom';
@@ -59,9 +67,6 @@ interface InventoryData {
   totalProducts: number;
   totalQuantity: number;
 }
-
-// ——— API Base URL ———
-const API_BASE = '/api';
 
 // ——— Date Helpers ———
 function getDateRange(range: TimeRange, customStart?: string, customEnd?: string): { startDate: string; endDate: string } {
@@ -379,9 +384,19 @@ const REPORT_CARDS = [
 ];
 
 // ——— Detail Views ———
+function EmptyState({ message = 'Chưa có dữ liệu báo cáo' }: { message?: string }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
+      <div style={{ fontSize: 36, marginBottom: 12 }}>📊</div>
+      <p style={{ fontSize: 15, fontWeight: 600, color: '#64748b', margin: '0 0 6px' }}>{message}</p>
+      <p style={{ fontSize: 13, margin: 0 }}>Dữ liệu sẽ xuất hiện khi có đơn hàng trong kỳ được chọn</p>
+    </div>
+  );
+}
+
 function SummaryDetail({ data, loading }: { data: SummaryData | null; loading: boolean }) {
   if (loading) return <SummarySkeleton />;
-  if (!data) return null;
+  if (!data) return <EmptyState />;
 
   const stats = [
     { label: 'Tổng đơn hàng', value: formatNumber(data.totalOrders), color: '#0891b2' },
@@ -459,7 +474,7 @@ function RevenueDetail({ data, loading, dateRange, onDateRangeChange, onExport }
   onExport: () => void;
 }) {
   if (loading) return <RevenueSkeleton />;
-  if (!data) return null;
+  if (!data) return <EmptyState />;
 
   const last7Days = data.dailyRevenue.slice(-7);
   const chartLabels = last7Days.map((d) => {
@@ -537,7 +552,7 @@ function OrdersDetail({ data, loading, dateRange, onDateRangeChange }: {
   onDateRangeChange: (range: TimeRange) => void;
 }) {
   if (loading) return <OrdersSkeleton />;
-  if (!data) return null;
+  if (!data) return <EmptyState />;
 
   const chartData = data.ordersByStatus.map((s) => ({
     label: ORDER_STATUS_LABELS[s.status] || s.status,
@@ -603,7 +618,7 @@ function OrdersDetail({ data, loading, dateRange, onDateRangeChange }: {
 
 function ProductsDetail({ data, loading }: { data: ProductData | null; loading: boolean }) {
   if (loading) return <ProductsSkeleton />;
-  if (!data) return null;
+  if (!data) return <EmptyState />;
 
   const last6Months = data.topProducts.slice(-6);
   const chartLabels = last6Months.map((p) => p.name.slice(0, 12));
@@ -679,7 +694,7 @@ function ProductsDetail({ data, loading }: { data: ProductData | null; loading: 
 
 function CustomersDetail({ data, loading }: { data: CustomerData | null; loading: boolean }) {
   if (loading) return <CustomersSkeleton />;
-  if (!data) return null;
+  if (!data) return <EmptyState />;
 
   return (
     <div>
@@ -763,7 +778,7 @@ function CustomersDetail({ data, loading }: { data: CustomerData | null; loading
 
 function InventoryDetail({ data, loading }: { data: InventoryData | null; loading: boolean }) {
   if (loading) return <InventorySkeleton />;
-  if (!data) return null;
+  if (!data) return <EmptyState />;
 
   return (
     <div>
@@ -989,6 +1004,7 @@ export default function AdminReportsPage() {
   const [activeReport, setActiveReport] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<TimeRange>('30days');
   const [loading, setLoading] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const toast = useToast();
 
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
@@ -998,19 +1014,20 @@ export default function AdminReportsPage() {
   const [customersData, setCustomersData] = useState<CustomerData | null>(null);
   const [inventoryData, setInventoryData] = useState<InventoryData | null>(null);
 
-  const fetchReports = useCallback(async () => {
+  const loadReports = useCallback(async () => {
     setLoading(true);
+    setAccessError(null);
     try {
       const { startDate, endDate } = getDateRange(timeRange);
-      const params = `?startDate=${startDate}&endDate=${endDate}`;
+      const dateParams = { startDate, endDate };
 
       const [summaryRes, revenueRes, ordersRes, productsRes, customersRes, inventoryRes] = await Promise.all([
-        fetch(`${API_BASE}/reports/summary${params}`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${API_BASE}/reports/revenue${params}`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${API_BASE}/reports/orders${params}`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${API_BASE}/reports/products${params}${params}&limit=10`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${API_BASE}/reports/customers${params}&limit=10`).then(r => r.ok ? r.json() : null).catch(() => null),
-        fetch(`${API_BASE}/reports/inventory`).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetchReportSummary(dateParams).catch(() => null),
+        fetchReportRevenue(dateParams).catch(() => null),
+        fetchReportOrders(dateParams).catch(() => null),
+        fetchReportProducts({ ...dateParams, limit: 10 }).catch(() => null),
+        fetchReportCustomers({ ...dateParams, limit: 10 }).catch(() => null),
+        fetchReportInventory().catch(() => null),
       ]);
 
       setSummaryData(summaryRes);
@@ -1019,17 +1036,25 @@ export default function AdminReportsPage() {
       setProductsData(productsRes);
       setCustomersData(customersRes);
       setInventoryData(inventoryRes);
-    } catch (error) {
+
+      if (!summaryRes && !revenueRes && !ordersRes) {
+        setAccessError('Bạn không có quyền xem báo cáo hoặc không thể kết nối đến API');
+      }
+    } catch (error: any) {
       console.error('Failed to fetch reports:', error);
-      toast.error('Không thể tải báo cáo');
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        setAccessError('Bạn không có quyền xem báo cáo');
+      } else {
+        toast.error('Không thể tải báo cáo');
+      }
     } finally {
       setLoading(false);
     }
   }, [timeRange, toast]);
 
   useEffect(() => {
-    fetchReports();
-  }, [fetchReports]);
+    loadReports();
+  }, [loadReports]);
 
   const handleExportRevenue = () => {
     if (!revenueData) return;
@@ -1096,7 +1121,7 @@ export default function AdminReportsPage() {
 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button
-            onClick={fetchReports}
+            onClick={loadReports}
             disabled={loading}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
@@ -1116,6 +1141,25 @@ export default function AdminReportsPage() {
           </button>
         </div>
       </div>
+
+      {/* Access error banner */}
+      {accessError && (
+        <div style={{
+          background: '#fef2f2',
+          border: '1px solid #fecaca',
+          borderRadius: 10,
+          padding: '14px 18px',
+          color: '#dc2626',
+          fontSize: 14,
+          fontWeight: 500,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+        }}>
+          <span>⚠️</span>
+          <span>{accessError}</span>
+        </div>
+      )}
 
       {/* Overview: Report Cards Grid */}
       {!activeReport && (

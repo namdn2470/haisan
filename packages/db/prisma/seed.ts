@@ -245,6 +245,7 @@ async function main() {
   await seedAdminProfile();
   await seedDemoOrders();
   await seedCustomRoles();
+  await seedHomepageSections();
 
   console.log("Seed completed.");
 }
@@ -1263,6 +1264,75 @@ async function seedCustomRoles() {
   }
 
   console.log("Seeded custom roles.");
+}
+
+async function seedHomepageSections() {
+  const existing = await prisma.homepageSection.count();
+  if (existing > 0) {
+    console.log("Homepage sections already seeded, skipping.");
+    return;
+  }
+
+  // Pick 6 active products with images for "frequently-bought"
+  const comboProducts = await prisma.product.findMany({
+    where: { status: "ACTIVE", images: { some: {} } },
+    orderBy: { soldCount: "desc" },
+    take: 6,
+    select: { id: true },
+  });
+
+  // Pick 3 for "today-suggestion"
+  const todayProducts = comboProducts.slice(0, 3);
+
+  if (comboProducts.length === 0) {
+    console.log("No active products found, skipping homepage sections seed.");
+    return;
+  }
+
+  const comboSection = await prisma.homepageSection.create({
+    data: {
+      slug: "frequently-bought",
+      title: "Thường mua cùng",
+      subtitle: "Tạo set hải sản đủ món cho bữa ăn",
+      description: "Chọn tổ hợp hải sản tươi ngon, thêm vào giỏ một lần",
+      ctaText: "Xem combo",
+      ctaUrl: "/products?category=combo",
+      enabled: true,
+      sortOrder: 10,
+      maxItems: 6,
+    },
+  });
+
+  await prisma.homepageSectionItem.createMany({
+    data: comboProducts.map((p, idx) => ({
+      sectionId: comboSection.id,
+      productId: p.id,
+      sortOrder: idx,
+    })),
+  });
+
+  const todaySection = await prisma.homepageSection.create({
+    data: {
+      slug: "today-suggestion",
+      title: "Gợi ý hôm nay",
+      subtitle: "Sản phẩm bán chạy hôm nay",
+      ctaText: "Xem sản phẩm",
+      ctaUrl: "/products",
+      enabled: true,
+      sortOrder: 20,
+      maxItems: 3,
+    },
+  });
+
+  await prisma.homepageSectionItem.createMany({
+    data: todayProducts.map((p, idx) => ({
+      sectionId: todaySection.id,
+      productId: p.id,
+      sortOrder: idx,
+    })),
+  });
+
+  console.log(`Seeded homepage sections: frequently-bought (${comboProducts.length} items), today-suggestion (${todayProducts.length} items).`);
 }
 
 main()

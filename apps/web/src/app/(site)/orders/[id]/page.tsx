@@ -10,7 +10,7 @@ import {
 import { img } from '@/lib/api';
 import { money } from '@/lib/money';
 import { getOrderById } from '@/services';
-import SiteShell from '@/components/shared/SiteShell';
+
 
 type OrderItem = {
   id: string; productName: string; quantity: number; unitPrice: number; lineTotal: number;
@@ -63,11 +63,11 @@ export default function OrderDetailPage() {
 
   if (loading) {
     return (
-      <SiteShell>
+      
         <main className="hs-container hs-page-main" style={{ maxWidth: 1040 }}>
           <div className="skeleton-card" style={{ height: 300 }} />
         </main>
-      </SiteShell>
+      
     );
   }
 
@@ -80,7 +80,7 @@ export default function OrderDetailPage() {
   const st = STATUS_MAP[order.orderStatus];
 
   return (
-    <SiteShell>
+    
       <main className="hs-container hs-page-main" style={{ maxWidth: 1040 }}>
         <div className="hs-breadcrumb">
           <Link href="/">Trang chủ</Link>
@@ -209,6 +209,6 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </main>
-    </SiteShell>
+    
   );
 }

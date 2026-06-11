@@ -622,11 +622,45 @@ export async function deleteShippingZone(id: string): Promise<any> {
 }
 
 // Reports
-export async function fetchReports(type: string, params?: { startDate?: string; endDate?: string }): Promise<any> {
-  const query = new URLSearchParams({ type });
+export async function fetchReportSummary(params?: { startDate?: string; endDate?: string }): Promise<any> {
+  const query = new URLSearchParams();
   if (params?.startDate) query.set('startDate', params.startDate);
   if (params?.endDate) query.set('endDate', params.endDate);
-  return adminFetch<any>(`/api/reports?${query.toString()}`);
+  return adminFetch<any>(`/api/reports/summary?${query.toString()}`);
+}
+
+export async function fetchReportRevenue(params?: { startDate?: string; endDate?: string }): Promise<any> {
+  const query = new URLSearchParams();
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  return adminFetch<any>(`/api/reports/revenue?${query.toString()}`);
+}
+
+export async function fetchReportOrders(params?: { startDate?: string; endDate?: string }): Promise<any> {
+  const query = new URLSearchParams();
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  return adminFetch<any>(`/api/reports/orders?${query.toString()}`);
+}
+
+export async function fetchReportProducts(params?: { startDate?: string; endDate?: string; limit?: number }): Promise<any> {
+  const query = new URLSearchParams();
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  if (params?.limit) query.set('limit', String(params.limit));
+  return adminFetch<any>(`/api/reports/products?${query.toString()}`);
+}
+
+export async function fetchReportCustomers(params?: { startDate?: string; endDate?: string; limit?: number }): Promise<any> {
+  const query = new URLSearchParams();
+  if (params?.startDate) query.set('startDate', params.startDate);
+  if (params?.endDate) query.set('endDate', params.endDate);
+  if (params?.limit) query.set('limit', String(params.limit));
+  return adminFetch<any>(`/api/reports/customers?${query.toString()}`);
+}
+
+export async function fetchReportInventory(): Promise<any> {
+  return adminFetch<any>('/api/reports/inventory');
 }
 
 // Roles / Permissions

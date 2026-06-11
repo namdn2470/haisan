@@ -1,9 +1,15 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import ClientLayout from '@/components/ClientLayout';
 import { getStoreSettings } from '@/lib/store-settings';
 import '../style.css';
 
 export const revalidate = 3600;
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getStoreSettings();

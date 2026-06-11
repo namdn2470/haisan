@@ -9,6 +9,13 @@ import { apiResponse } from '../../common/api-response';
 export class ShippingZonesController {
   constructor(private readonly service: ShippingZonesService) {}
 
+  @Public()
+  @Get('public')
+  async findPublic() {
+    const result = await this.service.findAll({ isActive: true });
+    return apiResponse(result, 'Lấy danh sách khu vực giao hàng thành công');
+  }
+
   @Get()
   async findAll(
     @Query('isActive') isActive?: string,

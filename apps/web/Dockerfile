@@ -27,9 +27,13 @@ COPY packages/shared ./packages/shared
 COPY packages/validation ./packages/validation
 
 # NEXT_PUBLIC_API_URL được baked vào client-side JS tại build time
-# Đây là URL mà trình duyệt dùng (thường là domain thật hoặc localhost)
 ARG NEXT_PUBLIC_API_URL=http://localhost:3001
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+# API_INTERNAL_URL dùng trong next.config.js rewrites (server-side proxy)
+# Docker: http://api:3001 | Local dev: không set (fallback localhost:3001)
+ARG API_INTERNAL_URL=http://api:3001
+ENV API_INTERNAL_URL=${API_INTERNAL_URL}
 
 RUN pnpm --filter @hsbx/web run build
 

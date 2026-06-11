@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   User, Package, Heart, MapPin, LogOut, ShoppingCart, Phone, Lock,
-  Eye, EyeOff, Truck, ShieldCheck, RotateCcw, CheckCircle2, Leaf,
+  Eye, EyeOff, Truck, ShieldCheck, RotateCcw, CheckCircle2, Leaf, Home,
 } from 'lucide-react';
 import { api, getToken, img } from '@/lib/api';
 import { money } from '@/lib/money';
@@ -17,7 +17,6 @@ import {
   register as registerUser,
 } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
-import SiteShell from '@/components/shared/SiteShell';
 
 type Profile = {
   id: string; fullName?: string; phone?: string; email?: string; role: string;
@@ -48,13 +47,13 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   RETURNED: { label: 'Trả hàng', color: '#f97316' },
 };
 
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'MANAGER'];
+
 export default function AccountPage() {
   return (
-    <SiteShell>
-      <Suspense fallback={<AccountPageFallback />}>
-        <AccountPageContent />
-      </Suspense>
-    </SiteShell>
+    <Suspense fallback={<AccountPageFallback />}>
+      <AccountPageContent />
+    </Suspense>
   );
 }
 
@@ -123,7 +122,12 @@ function AccountPageContent() {
       authLogin(res.token, res.user);
       if (showLogin) {
         setProfile(res.user);
-        router.push('/');
+        // Admin/staff → admin dashboard, customer → homepage
+        if (ADMIN_ROLES.includes(res.user?.role)) {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/');
+        }
       } else {
         setProfile(res.user);
         setAuthForm(prev => ({ ...prev, password: '', fullName: '' }));
@@ -156,7 +160,7 @@ function AccountPageContent() {
         setFavorites(prev => prev.filter(f => f.product.id !== productId));
       }
     } catch {
-      alert('Không thể cập nhật yêu thích. Vui lòng thử lại.');
+      setAuthError('Không thể cập nhật yêu thích. Vui lòng thử lại.');
     }
   };
 
@@ -179,7 +183,7 @@ function AccountPageContent() {
       setEditingAddress(null);
       setAddressForm({ fullName: '', phone: '', addressLine: '', label: 'Nhà' });
     } catch {
-      alert('Không thể lưu địa chỉ. Vui lòng thử lại.');
+      setAuthError('Không thể lưu địa chỉ. Vui lòng thử lại.');
     }
   };
 
@@ -188,7 +192,7 @@ function AccountPageContent() {
       await api(`/api/addresses/${id}`, { method: 'DELETE' });
       setAddresses(prev => prev.filter(a => a.id !== id));
     } catch {
-      alert('Không thể xóa địa chỉ. Vui lòng thử lại.');
+      setAuthError('Không thể xóa địa chỉ. Vui lòng thử lại.');
     }
   };
 
@@ -388,18 +392,36 @@ function AccountPageContent() {
   };
 
   return (
-    <>
-      <main className="ac-container">
-        <section className="hs-page-toolbar">
-          <div>
-            <h1>Tài khoản</h1>
-            <p>Quản lý thông tin, đơn hàng, địa chỉ và sản phẩm yêu thích</p>
-          </div>
-          <Link href="/products" className="hs-btn-primary">
-            <ShoppingCart size={18} />
-            Mua sắm
+    <div style={{ minHeight: '100vh', background: 'var(--soft, #f8fafc)' }}>
+      {/* Minimal account header — no site header/footer */}
+      <header className="ac-header">
+        <div className="hs-container ac-header-inner">
+          <Link href="/" className="ac-logo">
+            <div className="ac-logo-icon">
+              <svg width="20" height="20" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 20c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M4 25c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4"/>
+              </svg>
+            </div>
+            <span className="ac-logo-text">HẢI SẢN BIỂN XANH</span>
           </Link>
-        </section>
+
+          <div className="ac-header-right">
+            <Link href="/" className="ac-header-link">
+              <Home size={14} /> Trang chủ
+            </Link>
+            <Link href="/products" className="ac-header-link">
+              <ShoppingCart size={14} /> Mua sắm
+            </Link>
+            <div className="ac-header-user">
+              <div className="ac-header-avatar">{profile?.fullName?.[0]?.toUpperCase() || 'U'}</div>
+              <span className="ac-header-name">{profile?.fullName || profile?.phone}</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="ac-container">
         <div className="ac-layout">
           {/* Sidebar */}
           <aside className="ac-sidebar">
@@ -708,6 +730,6 @@ function AccountPageContent() {
           </section>
         </div>
       </main>
-    </>
+    </div>
   );
 }

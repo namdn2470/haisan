@@ -38,7 +38,7 @@ const PROMO_CARDS: PromoCardData[] = [
     title: 'Ưu đãi hôm nay',
     subtitle: 'Giảm giá sốc mỗi ngày',
     cta: 'Xem ưu đãi ngay',
-    href: '/promotions',
+    href: '/products',
     Icon: BadgePercent,
   },
 ];

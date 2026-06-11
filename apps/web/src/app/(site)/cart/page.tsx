@@ -13,7 +13,7 @@ import {
 import { img } from '@/lib/api';
 import { money } from '@/lib/money';
 import { useCart } from '@/lib/cart-store';
-import SiteShell from '@/components/shared/SiteShell';
+
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, getSubtotal, getShippingFee, getTotal, isLoading } =
@@ -25,7 +25,7 @@ export default function CartPage() {
 
   if (isLoading) {
     return (
-      <SiteShell>
+      
         <main className="hs-container cart-page">
           <div className="loading-grid">
             {[1, 2, 3].map((i) => (
@@ -33,12 +33,12 @@ export default function CartPage() {
             ))}
           </div>
         </main>
-      </SiteShell>
+      
     );
   }
 
   return (
-    <SiteShell>
+    
       <main className="hs-container cart-page">
         <div className="hs-breadcrumb">
           <Link href="/">Trang chủ</Link>
@@ -191,6 +191,6 @@ export default function CartPage() {
           </div>
         )}
       </main>
-    </SiteShell>
+    
   );
 }
