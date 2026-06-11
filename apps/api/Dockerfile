@@ -45,7 +45,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # openssl cần thiết cho Prisma
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl postgresql-client
 
 # Tạo user không có quyền root để chạy app
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -78,6 +78,12 @@ RUN cd packages/db && npx prisma generate --schema=prisma/schema.prisma
 
 # Copy compiled API từ builder
 COPY --from=builder /workspace/apps/api/dist ./apps/api/dist
+
+# Copy seed.ts và prisma source (cho tsx)
+COPY --from=builder /workspace/packages/db/prisma ./packages/db/prisma
+
+# Install tsx globally để chạy seed TypeScript
+RUN npm install -g tsx
 
 # Thư mục uploads — sẽ được mount bởi Docker volume
 RUN mkdir -p ./apps/api/public/uploads
