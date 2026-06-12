@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { useToast, useConfirm } from '../layout-client';
 import { fetchReviews, updateReviewStatus, deleteReview, fetchProducts } from '@/lib/admin/api';
+import { AdmReviewCard, AdmMobileEmpty, safeArray } from '@/components/admin/mobile/AdminMobileList';
+import { useAdminRealtime } from '@/hooks/useAdminRealtime';
 
 const REVIEW_STATUS: Record<string, { label: string; color: string; bg: string }> = {
   PENDING: { label: 'Chờ duyệt', color: '#d97706', bg: '#fffbeb' },
@@ -122,6 +124,15 @@ export default function ReviewsPage() {
     loadProducts();
   }, [loadProducts]);
 
+  const handleRealtimeReviewNew = useCallback(() => {
+    success('Có đánh giá mới');
+    loadReviews();
+  }, [loadReviews, success]);
+
+  useAdminRealtime({
+    onReviewNew: handleRealtimeReviewNew,
+  });
+
   const handleSearchChange = (value: string) => {
     setSearch(value);
     if (searchTimeout) clearTimeout(searchTimeout);
@@ -222,7 +233,32 @@ export default function ReviewsPage() {
           <Filter size={15} />
           Bộ lọc
         </button>
+      
+      {/* Mobile card list */}
+      <div className="space-y-3 lg:hidden">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl bg-red-50 p-4 text-center text-sm text-red-600">
+            Đã xảy ra lỗi khi tải dữ liệu
+          </div>
+        ) : safeArray(reviews).length === 0 ? (
+          <AdmMobileEmpty message="Chưa có đánh giá nào" />
+        ) : (
+          (safeArray(reviews) as any).map((review: any) => (
+            <AdmReviewCard
+              key={review.id}
+              review={review as any}
+              onApprove={(id) => updateReviewStatus(id, 'APPROVED')}
+              onReject={(id) => deleteReview(id)}
+            />
+          ))
+        )}
       </div>
+
+</div>
 
       {/* Filters */}
       {showFilters && (
@@ -277,7 +313,7 @@ export default function ReviewsPage() {
       )}
 
       {/* Table */}
-      <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="adm-card hidden lg:block" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div className="adm-loading-spinner" style={{ padding: 60 }} />
         ) : error ? (

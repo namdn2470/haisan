@@ -26,10 +26,12 @@ import { ConfigModule } from './modules/config/config.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { HomepageSectionsModule } from './modules/homepage-sections/homepage-sections.module';
+import { RealtimeModule } from './realtime/realtime.module';
 
 @Module({
   imports: [
     PrismaModule,
+    RealtimeModule,
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     AuthModule,
     UsersModule,

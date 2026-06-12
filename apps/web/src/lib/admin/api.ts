@@ -206,20 +206,41 @@ export async function deleteProduct(id: string): Promise<any> {
   return adminFetch<any>(`/api/products/${id}`, { method: 'DELETE' });
 }
 
-export async function uploadImage(file: File): Promise<string | null> {
+export type UploadImageResponse = {
+  url: string;
+  filename: string;
+  originalName: string;
+  size: number;
+  mimeType: string;
+};
+
+export async function uploadBannerImage(file: File): Promise<UploadImageResponse> {
   const url = getUrl('/api/upload/image');
   const token = getToken();
   const form = new FormData();
   form.append('file', file);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+
+  const raw = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = raw?.message || raw?.error?.message || 'Upload ảnh thất bại';
+    throw new Error(Array.isArray(msg) ? msg.join(', ') : msg);
+  }
+
+  const data = raw?.data ?? raw;
+  if (!data?.url) throw new Error('Upload ảnh thất bại');
+  return data as UploadImageResponse;
+}
+
+export async function uploadImage(file: File): Promise<string | null> {
   try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: form,
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return data?.data?.url ?? null;
+    const data = await uploadBannerImage(file);
+    return data.url;
   } catch {
     return null;
   }

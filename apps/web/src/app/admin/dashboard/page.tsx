@@ -20,6 +20,8 @@ import NewOrdersCard from '@/components/admin/dashboard/NewOrdersCard';
 import BestSellingProducts from '@/components/admin/dashboard/BestSellingProducts';
 import LowStockCard from '@/components/admin/dashboard/LowStockCard';
 import PendingOrdersTable from '@/components/admin/dashboard/PendingOrdersTable';
+import { useAdminRealtime } from '@/hooks/useAdminRealtime';
+import type { OrderRealtimePayload, RealtimeEventPayload } from '@/lib/socket';
 
 interface DashboardStats {
   today_orders: number;
@@ -249,6 +251,24 @@ export default function DashboardPage() {
       loadNewOrders();
     }
   }, [loading, pendingPage, loadPendingOrders, loadNewOrders]);
+
+  const handleDashboardUpdated = useCallback((_payload: RealtimeEventPayload) => {
+    loadDashboard();
+    loadPendingOrders(pendingPage);
+    loadNewOrders();
+  }, [loadDashboard, loadPendingOrders, loadNewOrders, pendingPage]);
+
+  const handleRealtimeNewOrder = useCallback((payload: OrderRealtimePayload) => {
+    success(`Có đơn hàng mới #${payload.orderCode}`);
+    loadDashboard();
+    loadPendingOrders(pendingPage);
+    loadNewOrders();
+  }, [loadDashboard, loadPendingOrders, loadNewOrders, pendingPage, success]);
+
+  useAdminRealtime({
+    onDashboardUpdated: handleDashboardUpdated,
+    onNewOrder: handleRealtimeNewOrder,
+  });
 
   const revenueChartData = revenue.map((r) => ({
     date: new Date(r.day).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../layout-client';
 import { fetchInventory, fetchInventoryLogs, importStock, exportStock, adjustStock } from '@/lib/admin/api';
+import { AdmInventoryCard, AdmMobileEmpty, safeArray } from '@/components/admin/mobile/AdminMobileList';
 
 interface InventoryItem {
   id: string;
@@ -369,7 +370,7 @@ export default function InventoryPage() {
           )}
 
           {/* Table */}
-          <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className="adm-card hidden lg:block" style={{ padding: 0, overflow: 'hidden' }}>
             {loading ? (
               <div className="adm-loading-spinner" style={{ padding: 60 }} />
             ) : error ? (
@@ -973,6 +974,30 @@ export default function InventoryPage() {
               <button className="adm-btn-ghost" onClick={() => setShowHistoryModal(false)}>
                 Đóng
               </button>
+
+      {/* Mobile card list */}
+      <div className="space-y-3 lg:hidden">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+          </div>
+        ) : error ? (
+          <div className="rounded-2xl bg-red-50 p-4 text-center text-sm text-red-600">
+            Đã xảy ra lỗi khi tải dữ liệu
+          </div>
+        ) : safeArray(items).length === 0 ? (
+          <AdmMobileEmpty message="Chưa có dữ liệu kho" />
+        ) : (
+          (safeArray(items) as any).map((item: any) => (
+            <AdmInventoryCard
+              key={item.id}
+              item={item as any}
+              onRestock={() => openStockModal(item, 'adjust')}
+            />
+          ))
+        )}
+      </div>
+
             </div>
           </div>
         </div>

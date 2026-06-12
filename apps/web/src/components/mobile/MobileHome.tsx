@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search, ShoppingCart, Phone, User,
   Leaf, Truck, ShieldCheck, Star, ChevronRight,
-  Package, Sparkles, Percent, ArrowRight,
+  Package, Sparkles, Percent, ArrowRight, MessageCircle,
 } from 'lucide-react';
 import { money } from '@/lib/money';
 import { useCart } from '@/lib/cart-store';
+import { resolveUploadUrl } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { formatPhone } from '@/lib/phone';
 import { useStoreSettings } from '@/contexts/StoreSettingsContext';
@@ -32,6 +33,7 @@ interface MobileHomeProps {
   banners: MobileBanner[];
   heroBanners?: MobileBanner[];
   bestSellerProducts: MobileProduct[];
+  featuredProducts?: MobileProduct[];
 }
 
 const HERO_IMG = 'https://images.unsplash.com/photo-1615141982883-c7ad0e69fd62?w=600&q=80';
@@ -58,13 +60,22 @@ const COMBO_CARDS = [
 /* ─────────────────────────────────────────
    MOBILE HOME
    ───────────────────────────────────────── */
-export default function MobileHome({ categories, bestSellerProducts }: MobileHomeProps) {
+export default function MobileHome({ categories, bestSellerProducts, featuredProducts = [], heroBanners = [] }: MobileHomeProps) {
   const { getItemCount } = useCart();
   const { settings } = useStoreSettings();
   const phone = settings?.phone || settings?.hotline || '0901 234 567';
   const formattedPhone = formatPhone(phone);
   const [search, setSearch] = useState('');
+  const [heroIdx, setHeroIdx] = useState(0);
   const router = useRouter();
+
+  useEffect(() => {
+    if (heroBanners.length <= 1) return;
+    const t = setInterval(() => setHeroIdx(i => (i + 1) % heroBanners.length), 5000);
+    return () => clearInterval(t);
+  }, [heroBanners.length]);
+
+  const heroImg = resolveUploadUrl(heroBanners[heroIdx]?.imageUrl) || HERO_IMG;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +90,7 @@ export default function MobileHome({ categories, bestSellerProducts }: MobileHom
       <header className="mob-hdr">
         <div className="mob-hdr-top">
           <Link href="/" className="mob-hdr-logo">
-            <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+            <svg width="26" height="26" viewBox="0 0 32 32" fill="none">
               <circle cx="16" cy="16" r="14" fill="#0ea5e9" opacity="0.2"/>
               <path d="M6 22c3-4 6-6 10-6s5 2 5 2 3-2 5-2 7 2 10 6" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
               <path d="M16 8l-2.5 5h5L16 8z" fill="#fff"/>
@@ -91,28 +102,28 @@ export default function MobileHome({ categories, bestSellerProducts }: MobileHom
           </Link>
           <div className="mob-hdr-actions">
             <Link href="/cart" className="mob-hdr-icon">
-              <ShoppingCart size={22} />
+              <ShoppingCart size={20} />
               {getItemCount() > 0 && <span className="mob-hdr-badge">{getItemCount()}</span>}
             </Link>
             <Link href="/account" className="mob-hdr-icon">
-              <User size={22} />
+              <User size={20} />
             </Link>
           </div>
         </div>
 
         {/* ── SEARCH ── */}
-        <form className="mob-search" onSubmit={handleSearch}>
-          <div className="mob-search-inner">
-            <Search size={17} className="mob-search-icon" />
+        <form className="mob-home-search" onSubmit={handleSearch}>
+          <div className="mob-home-search-field">
+            <Search size={20} className="mob-home-search-icon" />
             <input
               type="search"
               placeholder="Tìm tôm, cua, cá, mực..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="mob-search-input"
+              className="mob-home-search-input"
             />
           </div>
-          <button type="submit" className="mob-search-btn">Tìm</button>
+          <button type="submit" className="mob-home-search-btn">Tìm</button>
         </form>
       </header>
 
@@ -136,9 +147,29 @@ export default function MobileHome({ categories, bestSellerProducts }: MobileHom
             </div>
           </div>
           <div className="mob-hero-img-wrap">
-            <img src={HERO_IMG} alt="Hải sản tươi sống" className="mob-hero-img" />
+            <img
+              src={heroImg}
+              alt={heroBanners[heroIdx]?.title || 'Hải sản tươi sống'}
+              className="mob-hero-img"
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src = PROD_IMG;
+              }}
+            />
           </div>
         </div>
+        {heroBanners.length > 1 && (
+          <div className="mob-hero-dots">
+            {heroBanners.map((_, i) => (
+              <button
+                key={i}
+                className={`mob-hero-dot${i === heroIdx ? ' mob-hero-dot--on' : ''}`}
+                onClick={() => setHeroIdx(i)}
+                aria-label={`Ảnh ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ── CATEGORIES ── */}
@@ -203,7 +234,26 @@ export default function MobileHome({ categories, bestSellerProducts }: MobileHom
             </Link>
           </div>
           <div className="mob-prod-grid">
-            {bestSellerProducts.slice(0, 6).map(product => (
+            {bestSellerProducts.slice(0, 12).map(product => (
+              <MobileProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── FEATURED PRODUCTS ── */}
+      {featuredProducts.length > 0 && (
+        <section className="mob-section" data-section="mobile-featured">
+          <div className="mob-section-head">
+            <h2 className="mob-section-title">
+              <span className="mob-section-icon">⭐</span> Sản phẩm nổi bật
+            </h2>
+            <Link href="/products?featured=true" className="mob-section-link">
+              Xem tất cả <ChevronRight size={14} />
+            </Link>
+          </div>
+          <div className="mob-prod-grid">
+            {featuredProducts.slice(0, 6).map(product => (
               <MobileProductCard key={product.id} product={product} />
             ))}
           </div>
@@ -229,6 +279,60 @@ export default function MobileHome({ categories, bestSellerProducts }: MobileHom
             <div className="mob-trust-icon"><Phone size={22} /></div>
             <span>Hỗ trợ 24/7</span>
           </div>
+        </div>
+      </section>
+
+      {/* ── CONTACT / SUPPORT ── */}
+      <section className="mob-section">
+        <div className="mob-section-head">
+          <h2 className="mob-section-title">
+            <span className="mob-section-icon">💬</span> Liên hệ & Hỗ trợ
+          </h2>
+        </div>
+        <div className="mob-contact-grid">
+          <a href={`tel:${phone.replace(/\s/g, '')}`} className="mob-contact-btn mob-contact-phone">
+            <div className="mob-contact-icon"><Phone size={18} /></div>
+            <div className="mob-contact-text">
+              <span>Gọi đặt hàng</span>
+              <small>{formattedPhone}</small>
+            </div>
+          </a>
+          <a
+            href={settings?.zaloUrl || settings?.facebookUrl || `tel:${phone.replace(/\s/g, '')}`}
+            target={settings?.zaloUrl || settings?.facebookUrl ? '_blank' : undefined}
+            rel={settings?.zaloUrl || settings?.facebookUrl ? 'noopener noreferrer' : undefined}
+            className="mob-contact-btn mob-contact-chat"
+          >
+            <div className="mob-contact-icon"><MessageCircle size={18} /></div>
+            <div className="mob-contact-text">
+              <span>{settings?.zaloUrl ? 'Chat Zalo' : settings?.facebookUrl ? 'Facebook' : 'Gọi hỗ trợ'}</span>
+              <small>Phản hồi trong 5 phút</small>
+            </div>
+          </a>
+        </div>
+      </section>
+
+      {/* ── TIPS / GUIDE ── */}
+      <section className="mob-section">
+        <div className="mob-section-head">
+          <h2 className="mob-section-title">
+            <span className="mob-section-icon">📖</span> Mẹo chọn hải sản
+          </h2>
+        </div>
+        <div className="mob-tips-track">
+          {[
+            { emoji: '🦐', title: 'Chọn tôm tươi', tip: 'Tôm tươi màu sáng bóng, đầu và thân không tách rời, không mùi lạ.' },
+            { emoji: '🦀', title: 'Chọn cua ghẹ', tip: 'Cua còn sống, mai cứng, càng đủ. Nặng tay là cua nhiều thịt.' },
+            { emoji: '🐟', title: 'Chọn cá tươi', tip: 'Mắt cá trong, mang đỏ, vảy sáng, ấn vào thịt không bị lõm.' },
+            { emoji: '🦑', title: 'Chọn mực tươi', tip: 'Mực thân trắng sáng, chắc tay, mùi tanh nhẹ đặc trưng biển.' },
+            { emoji: '🐚', title: 'Chọn nghêu sò', tip: 'Vỏ còn nguyên, khép chặt. Thả vào nước, con chết sẽ nổi lên.' },
+          ].map((item) => (
+            <div key={item.title} className="mob-tip-card">
+              <span className="mob-tip-emoji">{item.emoji}</span>
+              <b className="mob-tip-title">{item.title}</b>
+              <p className="mob-tip-text">{item.tip}</p>
+            </div>
+          ))}
         </div>
       </section>
     </div>

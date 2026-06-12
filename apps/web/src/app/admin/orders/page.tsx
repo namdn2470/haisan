@@ -134,6 +134,89 @@ interface Order {
   coupons?: Array<{ promotion: { code: string; name: string }; discountAmount: number }>;
 }
 
+// ——— Badge components ———
+function OrderStatusBadge({ status }: { status: string }) {
+  const cfg = ORDER_STATUS[status as OrderStatusKey] || { label: status, color: '#64748b', bg: '#f1f5f9', icon: '' };
+  return (
+    <span
+      className="adm-badge"
+      style={{ color: cfg.color, background: cfg.bg, flexShrink: 0, padding: '3px 10px', borderRadius: 9999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+function PaymentBadge({ method }: { method?: string }) {
+  const cfg = PAYMENT_METHOD[(method || '') as PaymentMethodKey] || { label: method || 'COD', color: '#d97706', bg: '#fffbeb' };
+  return (
+    <span
+      className="adm-badge"
+      style={{ color: cfg.color, background: cfg.bg, padding: '3px 10px', borderRadius: 9999, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}
+    >
+      {cfg.label}
+    </span>
+  );
+}
+
+function OrderMobileCard({
+  order,
+  onView,
+  onUpdateStatus,
+}: {
+  order: Order;
+  onView: (id: string) => void;
+  onUpdateStatus: (id: string, status: OrderStatusKey) => void;
+}) {
+  const canConfirm = order.orderStatus === 'PENDING' || order.orderStatus === 'NEW';
+  return (
+    <article className="adm-order-card">
+      <div className="adm-order-card-header">
+        <div style={{ minWidth: 0 }}>
+          <p className="adm-order-card-code">#{order.orderCode}</p>
+          <p className="adm-order-card-customer">
+            {order.customerName} · {order.customerPhone}
+          </p>
+        </div>
+        <OrderStatusBadge status={order.orderStatus} />
+      </div>
+
+      <div className="adm-order-card-meta">
+        <div>
+          <p className="adm-order-card-meta-label">Tổng tiền</p>
+          <p className="adm-order-card-total">{formatCurrency(parseAmount(order.totalAmount))}</p>
+        </div>
+        <div>
+          <p className="adm-order-card-meta-label">Thanh toán</p>
+          <PaymentBadge method={order.paymentMethod} />
+        </div>
+        <div>
+          <p className="adm-order-card-meta-label">Sản phẩm</p>
+          <p className="adm-order-card-meta-value">{Array.isArray(order.items) ? order.items.length : 0} sp</p>
+        </div>
+        <div>
+          <p className="adm-order-card-meta-label">Thời gian</p>
+          <p className="adm-order-card-meta-value">{formatDate(order.createdAt)}</p>
+        </div>
+      </div>
+
+      <div className="adm-order-card-actions">
+        <button type="button" className="adm-order-card-btn-detail" onClick={() => onView(order.id)}>
+          Chi tiết
+        </button>
+        {canConfirm && (
+          <button type="button" className="adm-order-card-btn-confirm" onClick={() => onUpdateStatus(order.id, 'CONFIRMED')}>
+            Xác nhận
+          </button>
+        )}
+        <button type="button" className="adm-order-card-btn-cancel" onClick={() => onUpdateStatus(order.id, 'CANCELLED')}>
+          <X size={16} />
+        </button>
+      </div>
+    </article>
+  );
+}
+
 export default function OrdersPage() {
   const { success, error: showError } = useToast();
   const { confirm } = useConfirm();
@@ -161,6 +244,8 @@ export default function OrdersPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [adminNote, setAdminNote] = useState('');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const safeOrders = Array.isArray(orders) ? orders : [];
 
   // Close row dropdown on outside click
   useEffect(() => {
@@ -495,8 +580,8 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {/* Table */}
-      <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+      {/* Desktop Table — adm-desktop-only hides on mobile via admin.css */}
+      <div className="adm-card adm-desktop-only" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div className="adm-loading-spinner" style={{ padding: 60 }} />
         ) : error ? (
@@ -511,7 +596,7 @@ export default function OrdersPage() {
               Thử lại
             </button>
           </div>
-        ) : orders.length === 0 ? (
+        ) : safeOrders.length === 0 ? (
           <div className="adm-empty">
             <div className="adm-empty-icon">
               <Package size={32} />
@@ -539,7 +624,7 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map(order => {
+                {safeOrders.map(order => {
                   const st = ORDER_STATUS[order.orderStatus as keyof typeof ORDER_STATUS] || { label: order.orderStatus, color: '#64748b', bg: '#f1f5f9' };
                   const pm = PAYMENT_METHOD[order.paymentMethod as keyof typeof PAYMENT_METHOD] || { label: order.paymentMethod, color: '#64748b', bg: '#f1f5f9' };
 
@@ -561,18 +646,12 @@ export default function OrdersPage() {
                         </span>
                       </td>
                       <td>
-                        <span
-                          className="adm-badge"
-                          style={{ color: pm.color, background: pm.bg }}
-                        >
+                        <span className="adm-badge" style={{ color: pm.color, background: pm.bg }}>
                           {pm.label}
                         </span>
                       </td>
                       <td>
-                        <span
-                          className="adm-badge"
-                          style={{ color: st.color, background: st.bg }}
-                        >
+                        <span className="adm-badge" style={{ color: st.color, background: st.bg }}>
                           {st.label}
                         </span>
                       </td>
@@ -643,7 +722,7 @@ export default function OrdersPage() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination — desktop only */}
         {total > 0 && (
           <div className="adm-pagination">
             <span className="adm-pagination-info">
@@ -685,6 +764,32 @@ export default function OrdersPage() {
               </button>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Mobile Card List — adm-orders-mobile-list hides on desktop via admin.css */}
+      <div className="adm-orders-mobile-list">
+        {loading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+            <div className="adm-loading-spinner" />
+          </div>
+        ) : error ? (
+          <div style={{ background: '#fef2f2', borderRadius: 12, padding: 16, textAlign: 'center', color: '#ef4444', fontSize: 14 }}>
+            Đã xảy ra lỗi khi tải dữ liệu
+          </div>
+        ) : safeOrders.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8', fontSize: 14, fontWeight: 500 }}>
+            Chưa có đơn hàng nào
+          </div>
+        ) : (
+          safeOrders.map(order => (
+            <OrderMobileCard
+              key={order.id}
+              order={order}
+              onView={handleViewDetail}
+              onUpdateStatus={handleUpdateStatus}
+            />
+          ))
         )}
       </div>
 

@@ -1,14 +1,22 @@
 import {
   Controller, Post, UseInterceptors, UploadedFile,
-  Req, BadRequestException,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { mkdirSync } from 'fs';
+import { randomBytes } from 'crypto';
+import { join } from 'path';
 import { ADMIN_ROLES, Roles } from '../../common/roles.decorator';
-import { apiResponse } from '../../common/api-response';
 
-const ALLOWED_MIME = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads', 'banners');
+const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
+const EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
 
 @Roles(...ADMIN_ROLES)
 @Controller('upload')
@@ -17,23 +25,31 @@ export class UploadController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: join(process.cwd(), 'public', 'uploads'),
+        destination: (_req, _file, cb) => {
+          mkdirSync(UPLOAD_DIR, { recursive: true });
+          cb(null, UPLOAD_DIR);
+        },
         filename: (_req, file, cb) => {
-          const ext = extname(file.originalname).toLowerCase() || '.jpg';
-          cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+          const ext = EXT_BY_MIME[file.mimetype] || '.jpg';
+          cb(null, `banner-${Date.now()}-${randomBytes(4).toString('hex')}${ext}`);
         },
       }),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      limits: { fileSize: MAX_FILE_SIZE },
       fileFilter: (_req, file, cb) => {
         if (ALLOWED_MIME.includes(file.mimetype)) cb(null, true);
-        else cb(new BadRequestException('Chỉ chấp nhận file ảnh (jpg, png, gif, webp)'), false);
+        else cb(new BadRequestException('Chỉ hỗ trợ JPG, PNG hoặc WebP'), false);
       },
     }),
   )
-  uploadImage(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
+  uploadImage(@UploadedFile() file: Express.Multer.File) {
     if (!file) throw new BadRequestException('Không có file được gửi lên');
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const url = `${baseUrl}/uploads/${file.filename}`;
-    return apiResponse({ url }, 'Upload ảnh thành công');
+    const url = `/uploads/banners/${file.filename}`;
+    return {
+      url,
+      filename: file.filename,
+      originalName: file.originalname,
+      size: file.size,
+      mimeType: file.mimetype,
+    };
   }
 }

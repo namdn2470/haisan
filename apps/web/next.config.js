@@ -19,12 +19,17 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const apiUrl = process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
     return [
       {
-        // API_INTERNAL_URL: dùng trong Docker (http://api:3001)
-        // NEXT_PUBLIC_API_URL: fallback khi dev local
         source: '/api/:path*',
-        destination: `${process.env.API_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/:path*`,
+        destination: `${apiUrl}/api/:path*`,
+      },
+      {
+        // Proxy uploaded images: API stores files under /public/uploads,
+        // serves them at /uploads/*. Browser can't reach api:3001 directly.
+        source: '/uploads/:path*',
+        destination: `${apiUrl}/uploads/:path*`,
       },
     ];
   },

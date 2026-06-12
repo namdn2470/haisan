@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { CheckCircle, XCircle, AlertTriangle, Info, X, Trash2 } from 'lucide-react';
 import './admin.css';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminMobileLayout from '@/components/admin/mobile/AdminMobileLayout';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { getStoredUser, getToken } from '@/lib/api';
 
@@ -218,6 +219,7 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
   return (
     <ToastContext.Provider value={toastCtx}>
       <ConfirmContext.Provider value={confirmCtx}>
+        {/* Desktop layout — hidden on mobile via admin.css */}
         <div className="adm-layout">
           <AdminSidebar
             pathname={pathname}
@@ -237,6 +239,12 @@ export default function AdminLayoutClient({ children }: { children: React.ReactN
           </div>
         </div>
 
+        {/* Mobile layout — hidden on desktop */}
+        <AdminMobileLayout>
+          {children}
+        </AdminMobileLayout>
+
+        {/* Toast notifications */}
         <div className="adm-toast-container">
           {toasts.map(t => (
             <div key={t.id} className={`adm-toast adm-toast-${t.type}`}>

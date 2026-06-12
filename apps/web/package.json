@@ -11,12 +11,13 @@
     "clean": "rm -rf .next"
   },
   "dependencies": {
+    "@hsbx/shared": "workspace:*",
+    "@hsbx/ui": "workspace:*",
+    "lucide-react": "^0.460.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "lucide-react": "^0.460.0",
-    "@hsbx/ui": "workspace:*",
-    "@hsbx/shared": "workspace:*"
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -27,11 +27,12 @@ export default function ProductImageGallery({
     : [{ id: 'fallback', imageUrl: fallbackUrl, altText: productName, isThumbnail: true, sortOrder: 0 }];
 
   return (
-    <div>
+    <div className="product-gallery">
       <div className="detail-photo">
         {badgeLabel && <span className="badge">{badgeLabel}</span>}
         {onToggleFavorite && (
           <button
+            type="button"
             onClick={onToggleFavorite}
             className="pd-fav-btn"
             aria-label="Yêu thích"
@@ -49,10 +50,20 @@ export default function ProductImageGallery({
         />
         {allImages.length > 1 && (
           <>
-            <button className="pd-nav-btn pd-nav-prev" onClick={() => setActiveImage(i => i > 0 ? i - 1 : allImages.length - 1)}>
+            <button
+              type="button"
+              className="pd-nav-btn pd-nav-prev"
+              onClick={() => setActiveImage(i => i > 0 ? i - 1 : allImages.length - 1)}
+              aria-label="Ảnh trước"
+            >
               <ChevronLeft size={22} />
             </button>
-            <button className="pd-nav-btn pd-nav-next" onClick={() => setActiveImage(i => i < allImages.length - 1 ? i + 1 : 0)}>
+            <button
+              type="button"
+              className="pd-nav-btn pd-nav-next"
+              onClick={() => setActiveImage(i => i < allImages.length - 1 ? i + 1 : 0)}
+              aria-label="Ảnh sau"
+            >
               <ChevronRight size={22} />
             </button>
           </>
@@ -61,17 +72,19 @@ export default function ProductImageGallery({
       {allImages.length > 1 && (
         <div className="thumbs">
           {allImages.map((image, i) => (
-            <button key={image.id} onClick={() => setActiveImage(i)}>
+            <button
+              key={image.id}
+              type="button"
+              className={i === activeImage ? 'active' : ''}
+              onClick={() => setActiveImage(i)}
+              aria-label={`Xem ảnh ${i + 1}`}
+            >
               <img
                 src={image.imageUrl}
                 alt={image.altText || productName}
                 onError={(e) => {
                   const t = e.currentTarget;
                   if (!t.dataset.fallback) { t.dataset.fallback = 'true'; t.src = fallbackUrl; }
-                }}
-                style={{
-                  border: i === activeImage ? '2px solid var(--blue)' : '2px solid transparent',
-                  opacity: i === activeImage ? 1 : 0.6,
                 }}
               />
             </button>

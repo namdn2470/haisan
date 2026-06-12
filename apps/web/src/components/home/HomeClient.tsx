@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { money } from '@/lib/money';
 import { useCart } from '@/lib/cart-store';
-import { img } from '@/lib/api';
+import { img, resolveUploadUrl } from '@/lib/api';
 import { formatPhone } from '@/lib/phone';
 import { useStoreSettings } from '@/contexts/StoreSettingsContext';
 import type { ShippingZone } from '@/services/productService';
@@ -112,11 +112,19 @@ export default function HomeClient({ categories, products, heroBanners = [], fea
    ───────────────────────────────────────── */
 function DesktopHero({ heroBanners, promoProducts }: { heroBanners: HomeBanner[]; promoProducts: HomeProduct[] }) {
   const { settings } = useStoreSettings();
-  const hero = heroBanners[0];
-  const imgSrc = hero?.imageUrl || FALLBACK_IMG;
+  const [activeIdx, setActiveIdx] = useState(0);
   const phone = settings?.phone || settings?.hotline || '0901 234 567';
   const formattedPhone = formatPhone(phone);
   const [timeLeft, setTimeLeft] = useState({ h: 8, m: 23, s: 47 });
+
+  const hero = heroBanners[activeIdx] || heroBanners[0];
+  const imgSrc = resolveUploadUrl(hero?.imageUrl) || FALLBACK_IMG;
+
+  useEffect(() => {
+    if (heroBanners.length <= 1) return;
+    const t = setInterval(() => setActiveIdx(i => (i + 1) % heroBanners.length), 5000);
+    return () => clearInterval(t);
+  }, [heroBanners.length]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -167,22 +175,38 @@ function DesktopHero({ heroBanners, promoProducts }: { heroBanners: HomeBanner[]
           <div className="hs-hero-img-wrap">
             <img
               src={imgSrc}
-              alt="Hải sản tươi sống"
+              alt={hero?.title || 'Hải sản tươi sống'}
               className="hs-hero-img"
               onError={(e) => { const t = e.currentTarget as HTMLImageElement; if (!t.dataset.fb) { t.dataset.fb = '1'; t.src = FALLBACK_IMG; } }}
             />
+            {heroBanners.length > 1 && (
+              <div className="hs-hero-dots">
+                {heroBanners.map((_, i) => (
+                  <button
+                    key={i}
+                    className={`hs-hero-dot${i === activeIdx ? ' hs-hero-dot--on' : ''}`}
+                    onClick={() => setActiveIdx(i)}
+                    aria-label={`Ảnh ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: Promo Card */}
           <div className="hs-hero-promo">
             <div className="hs-promo-card">
               <div className="hs-promo-header">
-                <div className="hs-promo-icon"><Zap size={18} /></div>
-                <div>
-                  <h3>Ưu đãi hôm nay</h3>
-                  <p>Giảm giá sốc — Kết thúc sau:</p>
+                <div className="hs-promo-title-wrap">
+                  <div className="hs-promo-icon"><Zap size={18} /></div>
+                  <div>
+                    <h3>Ưu đãi hôm nay</h3>
+                    <p>Giảm giá sốc trong ngày</p>
+                  </div>
                 </div>
+                <span className="hs-promo-pill"><Percent size={12} /> Flash sale</span>
               </div>
+              <div className="hs-promo-count-label"><Clock size={13} /> Kết thúc sau</div>
               <div className="hs-promo-countdown">
                 <div className="hs-countdown-unit"><span>{String(timeLeft.h).padStart(2, '0')}</span><small>Giờ</small></div>
                 <span className="hs-countdown-sep">:</span>
@@ -193,9 +217,10 @@ function DesktopHero({ heroBanners, promoProducts }: { heroBanners: HomeBanner[]
               <div className="hs-promo-products">
                 {promoProducts.slice(0, 2).map(p => (
                   <Link href={`/products/${p.slug}`} key={p.id} className="hs-promo-item">
-                    <img src={p.images?.[0]?.imageUrl || PROD_IMG} alt={p.name} className="hs-promo-item-img"
+                    <img src={resolveUploadUrl(p.images?.[0]?.imageUrl) || PROD_IMG} alt={p.name} className="hs-promo-item-img"
                       onError={(e) => { const t = e.currentTarget as HTMLImageElement; if (!t.dataset.fb) { t.dataset.fb = '1'; t.src = PROD_IMG; } }} />
                     <div className="hs-promo-item-info">
+                      <div className="hs-promo-item-meta"><Tag size={11} /> Deal giới hạn</div>
                       <span className="hs-promo-item-name">{p.name}</span>
                       <span className="hs-promo-item-weight">/{p.unit}</span>
                       <div className="hs-promo-item-price">
@@ -207,7 +232,18 @@ function DesktopHero({ heroBanners, promoProducts }: { heroBanners: HomeBanner[]
                   </Link>
                 ))}
               </div>
-              <Link href="/products?promotion=true" className="hs-promo-link">Xem tất cả ưu đãi <ChevronRight size={14} /></Link>
+              <div className="hs-promo-progress">
+                <div className="hs-promo-progress-top">
+                  <span>Số lượng có hạn</span>
+                  <b>Đã bán 68%</b>
+                </div>
+                <div className="hs-promo-progress-bar"><span /></div>
+              </div>
+              <div className="hs-promo-benefits">
+                <span><CheckCircle2 size={14} /> Freeship đơn từ 500k</span>
+                <span><CheckCircle2 size={14} /> Áp dụng đến 23:59 hôm nay</span>
+              </div>
+              <Link href="/products?promotion=true" className="hs-promo-link">Mua ưu đãi ngay <ChevronRight size={16} /></Link>
             </div>
           </div>
         </div>

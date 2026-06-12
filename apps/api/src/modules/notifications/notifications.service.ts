@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@hsbx/db';
+import { RealtimeService } from '../../realtime/realtime.service';
 
 @Injectable()
 export class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async findAll(userId?: string) {
     const where: any = {};
@@ -25,6 +29,14 @@ export class NotificationsService {
 
   async create(dto: any) {
     const data = await this.prisma.notification.create({ data: dto });
+    this.realtime.emitNotificationNew(this.realtime.createPayload({
+      id: data.id,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      data: data.data,
+      createdAt: data.createdAt.toISOString(),
+    }), data.userId);
     return { data };
   }
 

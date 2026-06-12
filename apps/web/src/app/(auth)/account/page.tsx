@@ -1,11 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  User, Package, Heart, MapPin, LogOut, ShoppingCart, Phone, Lock,
-  Eye, EyeOff, Truck, ShieldCheck, RotateCcw, CheckCircle2, Leaf, Home,
+  User, Package, Heart, MapPin, LogOut, ShoppingCart, Phone, Truck,
+  Eye, EyeOff, Home, ChevronRight, CheckCircle2,
 } from 'lucide-react';
 import { api, getToken, img } from '@/lib/api';
 import { money } from '@/lib/money';
@@ -18,6 +18,8 @@ import {
 } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileBottomNav } from '@/components/shared/SiteShell';
+import { useOrderRealtime } from '@/hooks/useOrderRealtime';
+import type { OrderRealtimePayload } from '@/lib/socket';
 
 type Profile = {
   id: string; fullName?: string; phone?: string; email?: string; role: string;
@@ -50,17 +52,19 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'MANAGER'];
 
-const normalizeFavorites = (value: unknown): Favorite[] => {
-  if (Array.isArray(value)) return value as Favorite[];
+const normalizeArray = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[];
   if (value && typeof value === 'object') {
     const obj = value as { data?: unknown; favorites?: unknown; items?: unknown; products?: unknown };
-    if (Array.isArray(obj.data)) return obj.data as Favorite[];
-    if (Array.isArray(obj.favorites)) return obj.favorites as Favorite[];
-    if (Array.isArray(obj.items)) return obj.items as Favorite[];
-    if (Array.isArray(obj.products)) return obj.products as Favorite[];
+    if (Array.isArray(obj.data)) return obj.data as T[];
+    if (Array.isArray(obj.favorites)) return obj.favorites as T[];
+    if (Array.isArray(obj.items)) return obj.items as T[];
+    if (Array.isArray(obj.products)) return obj.products as T[];
   }
   return [];
 };
+
+const normalizeFavorites = (value: unknown): Favorite[] => normalizeArray<Favorite>(value);
 
 export default function AccountPage() {
   return (
@@ -95,8 +99,10 @@ function AccountPageContent() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const safeOrders: Order[] = Array.isArray(orders) ? orders : [];
   const safeFavorites: Favorite[] = Array.isArray(favorites) ? favorites : [];
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const safeAddresses: Address[] = Array.isArray(addresses) ? addresses : [];
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(true);
   const [authForm, setAuthForm] = useState({ phone: '', password: '', fullName: '' });
@@ -118,15 +124,34 @@ function AccountPageContent() {
         setProfile(user);
         setLoading(false);
       }).catch(() => setLoading(false));
-      getOrders().then(data => setOrders(data as unknown as Order[])).catch(() => {});
+      getOrders().then(data => setOrders(normalizeArray<Order>(data))).catch(() => {});
       api('/api/favorites')
         .then(r => setFavorites(normalizeFavorites(r)))
         .catch(error => { console.error('Failed to load favorites:', error); setFavorites([]); });
-      api<{ data: Address[] }>('/api/addresses').then(r => setAddresses(r.data || [])).catch(() => {});
+      api<{ data: Address[] }>('/api/addresses').then(r => setAddresses(normalizeArray<Address>(r))).catch(() => {});
     } else {
       setLoading(false);
     }
   }, []);
+
+  const handleRealtimeOrder = useCallback((payload: OrderRealtimePayload) => {
+    setOrders(prev => (Array.isArray(prev) ? prev : []).map(order => (
+      order.id === payload.id || order.orderCode === payload.orderCode
+        ? {
+            ...order,
+            orderStatus: payload.status || order.orderStatus,
+            totalAmount: payload.totalAmount ?? order.totalAmount,
+          }
+        : order
+    )));
+  }, []);
+
+  useOrderRealtime({
+    enabled: !!profile?.id,
+    userId: profile?.id,
+    onOrderUpdated: handleRealtimeOrder,
+    onOrderStatusChanged: handleRealtimeOrder,
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,10 +221,10 @@ function AccountPageContent() {
       } else {
         await api('/api/addresses', {
           method: 'POST',
-          body: JSON.stringify({ ...addressForm, isDefault: addresses.length === 0 }),
+          body: JSON.stringify({ ...addressForm, isDefault: safeAddresses.length === 0 }),
         });
       }
-      api<{ data: Address[] }>('/api/addresses').then(r => setAddresses(r.data || [])).catch(() => {});
+      api<{ data: Address[] }>('/api/addresses').then(r => setAddresses(normalizeArray<Address>(r))).catch(() => {});
       setShowAddressForm(false);
       setEditingAddress(null);
       setAddressForm({ fullName: '', phone: '', addressLine: '', label: 'Nhà' });
@@ -227,91 +252,58 @@ function AccountPageContent() {
   /* ========== AUTH PAGE (LOGIN / REGISTER) ========== */
   if (!profile && !loading) {
     return (
-      <>
-      <div className="auth-wrap">
-        {/* Left Panel — Brand */}
-        <div className="auth-left">
-          <div className="auth-left-content">
-            <Link href="/" className="auth-left-logo">
-              <div className="auth-left-logo-icon">
-                <svg width="48" height="48" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M6 24c3-4 7-6 12-6s6 3 6 3 3-3 6-3 9 3 12 6" stroke="currentColor" strokeWidth="3" strokeLinecap="round"/>
-                  <path d="M6 30c3-4 7-6 12-6s6 3 6 3 3-3 6-3 9 3 12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.4"/>
+      <div className="mau-root">
+        {/* Minimal Header */}
+        <header className="mau-header">
+          <Link href="/" className="mau-back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          </Link>
+          <div className="mau-brand">
+            <div className="mau-brand-icon">
+              <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+                <path d="M4 20c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                <path d="M4 25c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5"/>
+              </svg>
+            </div>
+            <span className="mau-brand-name">Hải Sản Biển Xanh</span>
+          </div>
+          <div className="mau-header-right" />
+        </header>
+
+        {/* Form Card */}
+        <main className="mau-main">
+          <div className="mau-card">
+            {/* Brand mark inside card */}
+            <div className="mau-card-brand">
+              <div className="mau-card-brand-icon">
+                <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+                  <path d="M4 20c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+                  <path d="M4 25c2-3 5-5 8-5s4 2 4 2 2-2 4-2 6 2 8 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.5"/>
                 </svg>
               </div>
-              <div>
-                <span className="auth-left-brand">HẢI SẢN BIỂN XANH</span>
-                <span className="auth-left-tagline">Tươi sống mỗi ngày</span>
-              </div>
-            </Link>
-
-            <h1 className="auth-left-title">
-              Hải sản tươi sống<br />
-              <span>Giao nhanh trong ngày</span>
-            </h1>
-
-            <div className="auth-features">
-              <div className="auth-feature">
-                <div className="auth-feature-icon"><Leaf size={20} /></div>
-                <div>
-                  <b>100% Tươi sống</b>
-                  <p>Đánh bắt và giao trong ngày</p>
-                </div>
-              </div>
-              <div className="auth-feature">
-                <div className="auth-feature-icon"><Truck size={20} /></div>
-                <div>
-                  <b>Giao nhanh 2h</b>
-                  <p>Nội thành TP.HCM</p>
-                </div>
-              </div>
-              <div className="auth-feature">
-                <div className="auth-feature-icon"><ShieldCheck size={20} /></div>
-                <div>
-                  <b>Cam kết chất lượng</b>
-                  <p>Đổi trả nếu không tươi</p>
-                </div>
-              </div>
-              <div className="auth-feature">
-                <div className="auth-feature-icon"><RotateCcw size={20} /></div>
-                <div>
-                  <b>Đổi trả dễ dàng</b>
-                  <p>Hoàn tiền 100% nếu không hài lòng</p>
-                </div>
+              <div className="mau-card-brand-text">
+                <b>Hải Sản Biển Xanh</b>
+                <span>Tươi sống mỗi ngày</span>
               </div>
             </div>
 
-            <div className="auth-left-footer">
-              <span><Phone size={14} /> Hotline: 0901 234 567</span>
-              <span>Hỗ trợ 24/7</span>
-            </div>
-          </div>
-          {/* Decorative wave */}
-          <div className="auth-left-wave">
-            <svg viewBox="0 0 400 80" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M0,40 C100,80 200,0 400,40 L400,80 L0,80 Z" fill="rgba(255,255,255,0.06)"/>
-            </svg>
-          </div>
-        </div>
+            <h1 className="mau-title">{showLogin ? 'Chào mừng trở lại!' : 'Tạo tài khoản mới'}</h1>
+            <p className="mau-subtitle">
+              {showLogin
+                ? 'Đăng nhập để quản lý đơn hàng và nhận ưu đãi'
+                : 'Tham gia để nhận ưu đãi và hải sản tươi sống'}
+            </p>
 
-        {/* Right Panel — Form */}
-        <div className="auth-right">
-          <div className="auth-form-wrapper">
-            <div className="auth-form-header">
-              <h2>{showLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}</h2>
-              <p>{showLogin ? 'Đăng nhập để quản lý đơn hàng và nhận ưu đãi' : 'Tham gia Hải Sản Biển Xanh để mua sắm hải sản tươi sống'}</p>
-            </div>
-
-            {/* Toggle tabs */}
-            <div className="auth-toggle">
+            {/* Segmented Tabs */}
+            <div className="mau-tabs">
               <button
-                className={`auth-toggle-btn ${showLogin ? 'active' : ''}`}
+                className={`mau-tab ${showLogin ? 'mau-tab--active' : ''}`}
                 onClick={() => switchAuthMode(true)}
               >
                 Đăng nhập
               </button>
               <button
-                className={`auth-toggle-btn ${!showLogin ? 'active' : ''}`}
+                className={`mau-tab ${!showLogin ? 'mau-tab--active' : ''}`}
                 onClick={() => switchAuthMode(false)}
               >
                 Đăng ký
@@ -319,84 +311,113 @@ function AccountPageContent() {
             </div>
 
             {authError && (
-              <div className="auth-error">
-                <Lock size={16} />
+              <div className="mau-error">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 {authError}
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="auth-form">
+            <form onSubmit={handleLogin} className="mau-form">
               {!showLogin && (
-                <div className="auth-field">
-                  <label>Họ và tên</label>
-                  <div className="auth-input-wrap">
-                    <User size={18} />
+                <div className="mau-field">
+                  <label className="mau-label">Họ và tên</label>
+                  <div className="mau-input-wrap">
+                    <svg className="mau-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     <input
                       type="text"
                       required
+                      autoComplete="name"
                       value={authForm.fullName}
                       onChange={e => setAuthForm(f => ({ ...f, fullName: e.target.value }))}
                       placeholder="Nguyễn Văn A"
+                      className="mau-input"
                     />
                   </div>
                 </div>
               )}
 
-              <div className="auth-field">
-                <label>Số điện thoại</label>
-                <div className="auth-input-wrap">
-                  <Phone size={18} />
+              <div className="mau-field">
+                <label className="mau-label">Số điện thoại</label>
+                <div className="mau-input-wrap">
+                  <svg className="mau-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4a2 2 0 0 1 1.99-2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.02z"/></svg>
                   <input
                     type="tel"
                     required
+                    autoComplete="tel"
+                    inputMode="tel"
                     value={authForm.phone}
                     onChange={e => setAuthForm(f => ({ ...f, phone: e.target.value }))}
                     placeholder="0901 234 567"
+                    className="mau-input"
                   />
                 </div>
               </div>
 
-              <div className="auth-field">
-                <div className="auth-field-label-row">
-                  <label>Mật khẩu</label>
-                  {showLogin && <a href="#" className="auth-forgot">Quên mật khẩu?</a>}
+              <div className="mau-field">
+                <div className="mau-label-row">
+                  <label className="mau-label">Mật khẩu</label>
+                  {showLogin && (
+                    <a href="#" className="mau-forgot">Quên mật khẩu?</a>
+                  )}
                 </div>
-                <div className="auth-input-wrap">
-                  <Lock size={18} />
+                <div className="mau-input-wrap">
+                  <svg className="mau-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                   <input
                     type={showPass ? 'text' : 'password'}
                     required
+                    autoComplete={showLogin ? 'current-password' : 'new-password'}
                     value={authForm.password}
                     onChange={e => setAuthForm(f => ({ ...f, password: e.target.value }))}
-                    placeholder={showPass ? 'Nhập mật khẩu' : '••••••••'}
+                    placeholder={showLogin ? 'Nhập mật khẩu' : 'Tạo mật khẩu'}
+                    className="mau-input"
                   />
-                  <button type="button" className="auth-pass-toggle" onClick={() => setShowPass(!showPass)}>
-                    {showPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                  <button
+                    type="button"
+                    className="mau-pass-toggle"
+                    onClick={() => setShowPass(!showPass)}
+                    aria-label={showPass ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  >
+                    {showPass
+                      ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    }
                   </button>
                 </div>
               </div>
 
-              <button type="submit" className="auth-submit">
-                {showLogin ? 'Đăng nhập' : 'Tạo tài khoản'}
+              <button type="submit" className="mau-cta">
+                {showLogin ? 'Đăng nhập ngay' : 'Tạo tài khoản'}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
               </button>
             </form>
 
-            <div className="auth-switch-text">
+            <div className="mau-switch">
               <span>{showLogin ? 'Chưa có tài khoản?' : 'Đã có tài khoản?'}</span>
               <button onClick={() => switchAuthMode(!showLogin)}>
                 {showLogin ? 'Đăng ký ngay' : 'Đăng nhập'}
               </button>
             </div>
-
-            <Link href="/" className="auth-back-home">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-              Về trang chủ
-            </Link>
           </div>
-        </div>
+
+          {/* Trust strip */}
+          <div className="mau-trust">
+            <div className="mau-trust-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Bảo mật SSL</span>
+            </div>
+            <div className="mau-trust-dot" />
+            <div className="mau-trust-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>Đổi trả 24h</span>
+            </div>
+            <div className="mau-trust-dot" />
+            <div className="mau-trust-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4a2 2 0 0 1 1.99-2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7a2 2 0 0 1 1.72 2.02z"/></svg>
+              <span>Hỗ trợ 24/7</span>
+            </div>
+          </div>
+        </main>
       </div>
-      <MobileBottomNav />
-      </>
     );
   }
 
@@ -409,10 +430,10 @@ function AccountPageContent() {
   ];
 
   const orderStats = {
-    total: orders.length,
-    delivering: orders.filter(o => o.orderStatus === 'DELIVERING').length,
-    completed: orders.filter(o => o.orderStatus === 'COMPLETED').length,
-    totalSpent: orders.reduce((s, o) => s + Number(o.totalAmount), 0),
+    total: safeOrders.length,
+    delivering: safeOrders.filter(o => o.orderStatus === 'DELIVERING').length,
+    completed: safeOrders.filter(o => o.orderStatus === 'COMPLETED').length,
+    totalSpent: safeOrders.reduce((s, o) => s + Number(o.totalAmount), 0),
   };
 
   return (
@@ -455,6 +476,10 @@ function AccountPageContent() {
                 <b>{profile?.fullName || 'User'}</b>
                 <span>{profile?.phone}</span>
                 <small>{profile?.role === 'ADMIN' ? 'Quản trị viên' : 'Khách hàng'}</small>
+                <div className="ac-profile-badges">
+                  <em>{safeOrders.length} đơn hàng</em>
+                  <em>{safeFavorites.length} yêu thích</em>
+                </div>
               </div>
             </div>
 
@@ -470,8 +495,8 @@ function AccountPageContent() {
                     <span className="ac-nav-label">{item.label}</span>
                     <span className="ac-nav-desc">{item.desc}</span>
                   </div>
-                  {item.key === 'orders' && orders.length > 0 && (
-                    <span className="ac-nav-badge">{orders.length}</span>
+                  {item.key === 'orders' && safeOrders.length > 0 && (
+                    <span className="ac-nav-badge">{safeOrders.length}</span>
                   )}
                 </Link>
               ))}
@@ -550,7 +575,7 @@ function AccountPageContent() {
                     <h2>Đơn hàng gần đây</h2>
                     <Link href="/account?tab=orders" className="ac-card-link">Xem tất cả</Link>
                   </div>
-                  {orders.length === 0 ? (
+                  {safeOrders.length === 0 ? (
                     <div className="ac-empty">
                       <Package size={40} strokeWidth={1.2} color="#c0c8d4" />
                       <p>Chưa có đơn hàng nào</p>
@@ -558,17 +583,18 @@ function AccountPageContent() {
                     </div>
                   ) : (
                     <div className="ac-orders-preview">
-                      {orders.slice(0, 3).map(order => {
+                      {safeOrders.slice(0, 3).map(order => {
                         const st = STATUS_MAP[order.orderStatus] || { label: order.orderStatus, color: '#666' };
+                        const orderItems = Array.isArray(order.items) ? order.items : [];
                         return (
                           <Link href={`/orders/${order.id}`} className="ac-order-row" key={order.id} style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}>
                             <div className="ac-order-left">
                               <div className="ac-order-code">#{order.orderCode}</div>
                               <div className="ac-order-items">
-                                {order.items.slice(0, 2).map((item, i) => (
+                                {orderItems.slice(0, 2).map((item, i) => (
                                   <span key={i}>{item.productName} x{item.quantity}</span>
                                 ))}
-                                {order.items.length > 2 && <span>+{order.items.length - 2} sản phẩm khác</span>}
+                                {orderItems.length > 2 && <span>+{orderItems.length - 2} sản phẩm khác</span>}
                               </div>
                             </div>
                             <div className="ac-order-right">
@@ -576,6 +602,7 @@ function AccountPageContent() {
                               <span className="ac-order-amount">{money(Number(order.totalAmount))}</span>
                               <span className="ac-order-date">{new Date(order.createdAt).toLocaleDateString('vi-VN')}</span>
                             </div>
+                            <ChevronRight className="ac-order-chevron" size={16} />
                           </Link>
                         );
                       })}
@@ -591,9 +618,9 @@ function AccountPageContent() {
                 <div className="ac-card">
                   <div className="ac-card-header">
                     <h2>Đơn hàng của tôi</h2>
-                    <span className="ac-order-count">{orders.length} đơn hàng</span>
+                    <span className="ac-order-count">{safeOrders.length} đơn hàng</span>
                   </div>
-                  {orders.length === 0 ? (
+                  {safeOrders.length === 0 ? (
                     <div className="ac-empty">
                       <Package size={48} strokeWidth={1} color="#c0c8d4" />
                       <h3>Chưa có đơn hàng nào</h3>
@@ -602,8 +629,9 @@ function AccountPageContent() {
                     </div>
                   ) : (
                     <div className="ac-orders-full">
-                      {orders.map(order => {
+                      {safeOrders.map(order => {
                         const st = STATUS_MAP[order.orderStatus] || { label: order.orderStatus, color: '#666' };
+                        const orderItems = Array.isArray(order.items) ? order.items : [];
                         return (
                           <Link href={`/orders/${order.id}`} className="ac-order-card" key={order.id} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                             <div className="ac-order-card-header">
@@ -616,7 +644,7 @@ function AccountPageContent() {
                               </span>
                             </div>
                             <div className="ac-order-card-body">
-                              {order.items.map((item, i) => (
+                              {orderItems.map((item, i) => (
                                 <div className="ac-order-item-row" key={i}>
                                   <span className="ac-order-item-name">{item.productName}</span>
                                   <span className="ac-order-item-qty">x{item.quantity}</span>
@@ -691,30 +719,30 @@ function AccountPageContent() {
                     </button>
                   </div>
                   {showAddressForm && (
-                    <form onSubmit={saveAddress} style={{ padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 12, borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <form onSubmit={saveAddress} className="ac-address-form">
+                      <div className="ac-address-grid">
                         <input placeholder="Họ tên" required value={addressForm.fullName} onChange={e => setAddressForm(p => ({ ...p, fullName: e.target.value }))}
-                          style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }} />
+                          className="ac-address-input" />
                         <input placeholder="Số điện thoại" required value={addressForm.phone} onChange={e => setAddressForm(p => ({ ...p, phone: e.target.value }))}
-                          style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }} />
+                          className="ac-address-input" />
                       </div>
                       <input placeholder="Địa chỉ cụ thể (số nhà, đường, phường/xã)" required value={addressForm.addressLine}
                         onChange={e => setAddressForm(p => ({ ...p, addressLine: e.target.value }))}
-                        style={{ padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14 }} />
-                      <div style={{ display: 'flex', gap: 8 }}>
+                        className="ac-address-input" />
+                      <div className="ac-address-types">
                         {['Nhà', 'Công ty', 'Khác'].map(l => (
                           <button type="button" key={l} onClick={() => setAddressForm(p => ({ ...p, label: l }))}
-                            style={{ padding: '6px 16px', borderRadius: 999, fontSize: 13, border: addressForm.label === l ? '2px solid #0891b2' : '1px solid #e2e8f0', background: addressForm.label === l ? '#0891b210' : '#fff', color: addressForm.label === l ? '#0891b2' : '#64748b', fontWeight: 600, cursor: 'pointer' }}>
+                            className={`ac-address-type ${addressForm.label === l ? 'active' : ''}`}>
                             {l}
                           </button>
                         ))}
                       </div>
-                      <button type="submit" style={{ padding: '10px 0', background: '#0891b2', color: '#fff', border: 'none', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-start', paddingLeft: 24, paddingRight: 24 }}>
+                      <button type="submit" className="ac-address-submit">
                         {editingAddress ? 'Cập nhật' : 'Lưu địa chỉ'}
                       </button>
                     </form>
                   )}
-                  {addresses.length === 0 && !showAddressForm ? (
+                  {safeAddresses.length === 0 && !showAddressForm ? (
                     <div className="ac-empty">
                       <MapPin size={48} strokeWidth={1} color="#c0c8d4" />
                       <h3>Chưa có địa chỉ nào</h3>
@@ -722,7 +750,7 @@ function AccountPageContent() {
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 16 }}>
-                      {addresses.map(addr => (
+                      {safeAddresses.map(addr => (
                         <div key={addr.id} style={{
                           display: 'flex', gap: 12, padding: '14px 16px', borderRadius: 10,
                           border: addr.isDefault ? '2px solid #0891b2' : '1px solid #f1f5f9',

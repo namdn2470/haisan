@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { Bell, ExternalLink, Menu, ChevronDown, ShoppingCart, AlertTriangle, Star, CreditCard, Truck } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchNotifications, markNotificationRead } from '@/lib/admin/api';
+import { useAdminRealtime } from '@/hooks/useAdminRealtime';
+import type { RealtimeEventPayload } from '@/lib/socket';
 
 const PAGE_TITLES: Record<string, string> = {
   '/admin/dashboard': 'Tổng quan',
@@ -30,6 +32,7 @@ interface AdminHeaderProps {
   pathname: string;
   user?: { fullName?: string; phone?: string; role: string } | null;
   onToggle?: () => void;
+  onRealtimeToast?: (type: 'success' | 'warning' | 'info', message: string) => void;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -62,18 +65,20 @@ function formatTimeAgo(dateStr: string): string {
   return date.toLocaleDateString('vi-VN');
 }
 
-export default function AdminHeader({ pathname, user, onToggle }: AdminHeaderProps) {
+export default function AdminHeader({ pathname, user, onToggle, onRealtimeToast }: AdminHeaderProps) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const notifRef = useRef<HTMLDivElement>(null);
+  const seenNotificationIds = useRef<Set<string>>(new Set());
 
   const loadNotifs = useCallback(async () => {
     try {
       const data = await fetchNotifications({ limit: 10 });
       const items = data.data || [];
       setNotifications(items);
+      seenNotificationIds.current = new Set(items.map((item: any) => item.id));
       setUnreadCount(items.filter((n: any) => !n.isRead).length);
     } catch {
       // ignore
@@ -82,9 +87,49 @@ export default function AdminHeader({ pathname, user, onToggle }: AdminHeaderPro
 
   useEffect(() => {
     loadNotifs();
-    const interval = setInterval(loadNotifs, 30000);
-    return () => clearInterval(interval);
   }, [loadNotifs]);
+
+  const handleRealtimeNotification = useCallback((payload: RealtimeEventPayload) => {
+    if (seenNotificationIds.current.has(payload.id)) return;
+    seenNotificationIds.current.add(payload.id);
+    setNotifications(prev => {
+      return [{
+        id: payload.id,
+        type: payload.type,
+        title: payload.title,
+        message: payload.message || payload.title,
+        data: payload.data,
+        isRead: false,
+        createdAt: payload.createdAt,
+      }, ...prev].slice(0, 10);
+    });
+    setUnreadCount(prev => prev + 1);
+    if (payload.type === 'ORDER_PAID') {
+      onRealtimeToast?.('success', payload.message || 'Có thanh toán thành công');
+    } else if (payload.type === 'PRODUCT_LOW_STOCK') {
+      onRealtimeToast?.('warning', payload.message || 'Có sản phẩm sắp hết hàng');
+    }
+  }, [onRealtimeToast]);
+
+  const handleNewOrder = useCallback((payload: { orderCode?: string }) => {
+    onRealtimeToast?.('success', `Có đơn hàng mới ${payload.orderCode ? `#${payload.orderCode}` : ''}`.trim());
+  }, [onRealtimeToast]);
+
+  const handleInventoryLowStock = useCallback((payload: { productName?: string; quantity?: number }) => {
+    onRealtimeToast?.('warning', `Tồn kho thấp: ${payload.productName || 'Sản phẩm'}${payload.quantity !== undefined ? ` còn ${payload.quantity}` : ''}`);
+  }, [onRealtimeToast]);
+
+  const handleReviewNew = useCallback(() => {
+    onRealtimeToast?.('info', 'Có đánh giá mới cần kiểm tra');
+  }, [onRealtimeToast]);
+
+  useAdminRealtime({
+    enabled: !!user,
+    onNotification: handleRealtimeNotification,
+    onNewOrder: handleNewOrder,
+    onInventoryLowStock: handleInventoryLowStock,
+    onReviewNew: handleReviewNew,
+  });
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

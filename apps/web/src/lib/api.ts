@@ -195,6 +195,19 @@ export const apiClient = {
 };
 
 // ============================================================
+// Upload URL resolver
+// API upload controller stores images as http://api:3001/uploads/file.jpg
+// (Docker-internal URL). This normalizes any /uploads/ URL to a
+// relative path so it goes through Next.js's /uploads/* proxy rewrite.
+// ============================================================
+export function resolveUploadUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  if (!url.includes('/uploads/')) return url;
+  const match = url.match(/(\/uploads\/.+)/);
+  return match ? match[1] : url;
+}
+
+// ============================================================
 // Image URL helper
 // Maps shorthand image names to their actual public paths.
 // Falls back to Pexels CDN or a placeholder if not found.

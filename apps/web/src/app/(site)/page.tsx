@@ -49,6 +49,7 @@ export default async function HomePage() {
           banners={bannersData}
           heroBanners={heroBannersData}
           bestSellerProducts={bestSellerData}
+          featuredProducts={featuredData}
         />
       </div>
 

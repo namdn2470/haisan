@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@hsbx/db';
+import { RealtimeService } from '../../realtime/realtime.service';
 
 @Injectable()
 export class ReviewsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async findAll(params: {
     productId?: string;
@@ -91,6 +95,18 @@ export class ReviewsService {
   async create(userId: string, dto: any) {
     const data = await this.prisma.review.create({
       data: { ...dto, userId },
+      include: {
+        user: { select: { fullName: true, email: true } },
+        product: { select: { name: true } },
+      },
+    });
+    this.realtime.emitReviewNew({
+      id: data.id,
+      productId: data.productId,
+      productName: data.product?.name || undefined,
+      rating: data.rating,
+      customerName: data.user?.fullName || data.user?.email || undefined,
+      createdAt: data.createdAt.toISOString(),
     });
     return { data };
   }

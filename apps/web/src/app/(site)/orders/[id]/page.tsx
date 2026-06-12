@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -10,6 +10,8 @@ import {
 import { img } from '@/lib/api';
 import { money } from '@/lib/money';
 import { getOrderById } from '@/services';
+import { useOrderRealtime } from '@/hooks/useOrderRealtime';
+import type { OrderRealtimePayload } from '@/lib/socket';
 
 
 type OrderItem = {
@@ -26,10 +28,10 @@ type OrderDetail = {
 };
 
 const STATUS_STEPS = [
-  { key: 'NEW', label: 'Đã đặt hàng', icon: FileText },
-  { key: 'CONFIRMED', label: 'Đã xác nhận', icon: CheckCircle2 },
-  { key: 'PREPARING', label: 'Đang chuẩn bị', icon: Package },
-  { key: 'DELIVERING', label: 'Đang giao hàng', icon: Truck },
+  { key: 'NEW', label: 'Đặt hàng', icon: FileText },
+  { key: 'CONFIRMED', label: 'Xác nhận', icon: CheckCircle2 },
+  { key: 'PREPARING', label: 'Chuẩn bị', icon: Package },
+  { key: 'DELIVERING', label: 'Đang giao', icon: Truck },
   { key: 'COMPLETED', label: 'Hoàn tất', icon: CheckCircle2 },
 ];
 
@@ -61,13 +63,30 @@ export default function OrderDetailPage() {
       .catch(() => setLoading(false));
   }, [id]);
 
+  const handleRealtimeOrder = useCallback((payload: OrderRealtimePayload) => {
+    setOrder(prev => {
+      if (!prev || (payload.id !== prev.id && payload.orderCode !== prev.orderCode)) return prev;
+      return {
+        ...prev,
+        orderStatus: payload.status || prev.orderStatus,
+        totalAmount: payload.totalAmount ?? prev.totalAmount,
+        updatedAt: payload.updatedAt || prev.updatedAt,
+      };
+    });
+  }, []);
+
+  useOrderRealtime({
+    enabled: !!order?.id,
+    orderId: order?.id,
+    onOrderUpdated: handleRealtimeOrder,
+    onOrderStatusChanged: handleRealtimeOrder,
+  });
+
   if (loading) {
     return (
-      
-        <main className="hs-container hs-page-main" style={{ maxWidth: 1040 }}>
-          <div className="skeleton-card" style={{ height: 300 }} />
-        </main>
-      
+      <main className="hs-container hs-page-main" style={{ maxWidth: 1040 }}>
+        <div className="skeleton-card" style={{ height: 300 }} />
+      </main>
     );
   }
 
@@ -80,135 +99,149 @@ export default function OrderDetailPage() {
   const st = STATUS_MAP[order.orderStatus];
 
   return (
-    
-      <main className="hs-container hs-page-main" style={{ maxWidth: 1040 }}>
-        <div className="hs-breadcrumb">
-          <Link href="/">Trang chủ</Link>
-          <span>/</span>
-          <Link href="/orders">Đơn hàng</Link>
-          <span>/</span>
-          <span>#{order.orderCode}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Đơn hàng #{order.orderCode}</h1>
-          {st && (
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-              padding: '6px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700,
-              background: st.color + '18', color: st.color,
-            }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', background: st.color }} />
-              {st.label}
-            </span>
-          )}
-        </div>
+    <main className="hs-container hs-page-main" style={{ maxWidth: 1040 }}>
+      {/* Breadcrumb */}
+      <div className="hs-breadcrumb">
+        <Link href="/">Trang chủ</Link>
+        <span>/</span>
+        <Link href="/orders">Đơn hàng</Link>
+        <span>/</span>
+        <span>#{order.orderCode}</span>
+      </div>
 
-        {order.orderStatus !== 'CANCELLED' && (
-          <div style={{ display: 'flex', gap: 0, marginBottom: 32, background: '#f8fafc', borderRadius: 12, padding: '20px 16px', position: 'relative' }}>
+      {/* Header: title + status badge */}
+      <div className="od-header">
+        <h1 className="od-header-title">Đơn hàng #{order.orderCode}</h1>
+        {st && (
+          <span className="od-badge" style={{ background: st.color + '18', color: st.color }}>
+            <span className="od-badge-dot" style={{ background: st.color }} />
+            {st.label}
+          </span>
+        )}
+      </div>
+
+      {/* Status timeline */}
+      {order.orderStatus !== 'CANCELLED' && (
+        <div className="od-timeline-wrap">
+          <div className="od-timeline">
             {STATUS_STEPS.map((step, i) => {
               const done = i <= currentStep;
               const Icon = step.icon;
               return (
-                <div key={step.key} style={{ flex: 1, textAlign: 'center', position: 'relative', zIndex: 1 }}>
-                  <div style={{
-                    width: 36, height: 36, borderRadius: '50%', margin: '0 auto 8px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: done ? '#0891b2' : '#e2e8f0', color: done ? '#fff' : '#94a3b8',
-                    transition: 'all 0.3s',
-                  }}>
-                    <Icon size={18} />
+                <div key={step.key} className="od-step">
+                  <div className={`od-step-icon ${done ? 'od-step-icon--done' : 'od-step-icon--pending'}`}>
+                    <Icon size={16} />
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: done ? 700 : 500, color: done ? '#0891b2' : '#94a3b8' }}>
+                  <div className={`od-step-label ${done ? 'od-step-label--done' : 'od-step-label--pending'}`}>
                     {step.label}
                   </div>
                   {i < STATUS_STEPS.length - 1 && (
-                    <div style={{
-                      position: 'absolute', top: 18, left: '60%', width: '80%', height: 2,
-                      background: i < currentStep ? '#0891b2' : '#e2e8f0', zIndex: -1,
-                    }} />
+                    <div
+                      className="od-step-connector"
+                      style={{ background: i < currentStep ? '#0891b2' : '#e2e8f0' }}
+                    />
                   )}
                 </div>
               );
             })}
           </div>
-        )}
+        </div>
+      )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20 }}>
-          {/* Left: items */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="card" style={{ padding: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px' }}>Sản phẩm trong đơn</h3>
-              {order.items.map(item => (
-                <div key={item.id} style={{ display: 'flex', gap: 12, padding: '12px 0', borderTop: '1px solid #f1f5f9' }}>
-                  <img src={item.imageUrl || img('prod-tom.jpg')} alt={item.productName}
-                    onError={(e) => { const t = e.currentTarget; if (!t.dataset.fallback) { t.dataset.fallback = 'true'; t.src = 'https://images.pexels.com/photos/14480456/pexels-photo-14480456.jpeg?auto=compress&cs=tinysrgb&w=200'; } }}
-                    style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 8, border: '1px solid #f1f5f9' }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{item.productName}</div>
-                    {item.variantName && <div style={{ fontSize: 12, color: '#94a3b8' }}>{item.variantName}</div>}
-                    <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
-                      {money(Number(item.unitPrice))} x {item.quantity}
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap' }}>{money(Number(item.lineTotal))}</div>
+      {/* Main grid: 1-col mobile → 2-col desktop */}
+      <div className="od-grid">
+        {/* Left column: items + note */}
+        <div className="od-col">
+          <div className="od-card">
+            <h3 className="od-card-title">Sản phẩm trong đơn</h3>
+            {order.items.map(item => (
+              <div key={item.id} className="od-item">
+                <img
+                  src={item.imageUrl || img('prod-tom.jpg')}
+                  alt={item.productName}
+                  onError={(e) => {
+                    const t = e.currentTarget;
+                    if (!t.dataset.fallback) {
+                      t.dataset.fallback = 'true';
+                      t.src = 'https://images.pexels.com/photos/14480456/pexels-photo-14480456.jpeg?auto=compress&cs=tinysrgb&w=200';
+                    }
+                  }}
+                  className="od-item-img"
+                />
+                <div className="od-item-body">
+                  <div className="od-item-name">{item.productName}</div>
+                  {item.variantName && <div className="od-item-variant">{item.variantName}</div>}
+                  <div className="od-item-qty">{money(Number(item.unitPrice))} × {item.quantity}</div>
                 </div>
-              ))}
-            </div>
+                <div className="od-item-total">{money(Number(item.lineTotal))}</div>
+              </div>
+            ))}
+          </div>
 
-            {order.customerNote && (
-              <div className="card" style={{ padding: 20 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>Ghi chú</h3>
-                <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>{order.customerNote}</p>
+          {order.customerNote && (
+            <div className="od-card">
+              <h3 className="od-card-title" style={{ marginBottom: 8 }}>Ghi chú</h3>
+              <p style={{ fontSize: 14, color: '#64748b', margin: 0 }}>{order.customerNote}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right column: summary + shipping + back */}
+        <div className="od-col">
+          <div className="od-card">
+            <h3 className="od-card-title">Tổng quan đơn hàng</h3>
+            <div className="od-summary-row">
+              <span className="od-summary-label">Tạm tính</span>
+              <b>{money(Number(order.totalAmount) - Number(order.shippingFee) + Number(order.discountAmount || 0))}</b>
+            </div>
+            {Number(order.discountAmount) > 0 && (
+              <div className="od-summary-row">
+                <span className="od-summary-label">Giảm giá</span>
+                <b style={{ color: '#10b981' }}>-{money(Number(order.discountAmount))}</b>
               </div>
             )}
+            <div className="od-summary-row">
+              <span className="od-summary-label">Phí giao hàng</span>
+              <b>
+                {Number(order.shippingFee) === 0
+                  ? <span style={{ color: '#10b981' }}>Miễn phí</span>
+                  : money(Number(order.shippingFee))}
+              </b>
+            </div>
+            <div className="od-summary-total">
+              <span style={{ fontWeight: 700 }}>Tổng cộng</span>
+              <b style={{ color: '#dc2626', fontSize: 18 }}>{money(Number(order.totalAmount))}</b>
+            </div>
           </div>
 
-          {/* Right: summary + info */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="card" style={{ padding: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px' }}>Tổng quan đơn hàng</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>Tạm tính</span><b>{money(Number(order.totalAmount) - Number(order.shippingFee) + Number(order.discountAmount || 0))}</b></div>
-                {Number(order.discountAmount) > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>Giảm giá</span><b style={{ color: '#10b981' }}>-{money(Number(order.discountAmount))}</b></div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: '#64748b' }}>Phí giao hàng</span><b>{Number(order.shippingFee) === 0 ? <span style={{ color: '#10b981' }}>Miễn phí</span> : money(Number(order.shippingFee))}</b></div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '2px solid #f1f5f9', paddingTop: 10, fontSize: 16 }}><span style={{ fontWeight: 700 }}>Tổng cộng</span><b style={{ color: '#dc2626', fontSize: 18 }}>{money(Number(order.totalAmount))}</b></div>
+          <div className="od-card">
+            <h3 className="od-card-title">Thông tin giao hàng</h3>
+            <div className="od-info-row">
+              <MapPin size={16} className="od-info-icon" />
+              <div>
+                <div style={{ fontWeight: 600 }}>{order.customerName}</div>
+                <div style={{ color: '#64748b' }}>{order.shippingAddressText}</div>
               </div>
             </div>
-
-            <div className="card" style={{ padding: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px' }}>Thông tin giao hàng</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                  <MapPin size={16} style={{ color: '#0891b2', marginTop: 2, flexShrink: 0 }} />
-                  <div><div style={{ fontWeight: 600 }}>{order.customerName}</div><div style={{ color: '#64748b' }}>{order.shippingAddressText}</div></div>
-                </div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <Phone size={16} style={{ color: '#0891b2', flexShrink: 0 }} />
-                  <span>{order.customerPhone}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <CreditCard size={16} style={{ color: '#0891b2', flexShrink: 0 }} />
-                  <span>{PAYMENT_MAP[order.paymentMethod] || order.paymentMethod}</span>
-                </div>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <Clock size={16} style={{ color: '#0891b2', flexShrink: 0 }} />
-                  <span>Đặt lúc {new Date(order.createdAt).toLocaleString('vi-VN')}</span>
-                </div>
-              </div>
+            <div className="od-info-row">
+              <Phone size={16} className="od-info-icon" />
+              <span>{order.customerPhone}</span>
             </div>
-
-            <Link href="/account?tab=orders" style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              padding: '12px 0', border: '1px solid #e2e8f0', borderRadius: 10,
-              fontSize: 14, fontWeight: 600, color: '#64748b', textDecoration: 'none',
-            }}>
-              <ArrowLeft size={16} /> Quay lại danh sách đơn hàng
-            </Link>
+            <div className="od-info-row">
+              <CreditCard size={16} className="od-info-icon" />
+              <span>{PAYMENT_MAP[order.paymentMethod] || order.paymentMethod}</span>
+            </div>
+            <div className="od-info-row">
+              <Clock size={16} className="od-info-icon" />
+              <span>Đặt lúc {new Date(order.createdAt).toLocaleString('vi-VN')}</span>
+            </div>
           </div>
+
+          <Link href="/account?tab=orders" className="od-back-btn">
+            <ArrowLeft size={16} /> Quay lại danh sách đơn hàng
+          </Link>
         </div>
-      </main>
-    
+      </div>
+    </main>
   );
 }

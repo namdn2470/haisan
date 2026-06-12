@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
-  Facebook, Heart, Home, MapPin, Menu, MessageCircle, Phone, RotateCcw,
+  Facebook, Home, MapPin, Menu, MessageCircle, Phone, RotateCcw,
   Search, ShieldCheck, ShoppingCart, Truck, User, Clock, CreditCard,
 } from 'lucide-react';
 import CitySelector from '@/lib/CitySelector';
@@ -354,14 +354,11 @@ export function SiteFooter() {
 
 export function MobileBottomNav({ className = '' }: { className?: string }) {
   const pathname = usePathname();
-  const { isLoggedIn, user } = useAuth();
-  const displayName = user?.fullName || user?.phone || null;
   return (
     <div className={`hs-mobile-nav ${className}`}>
       <Link href="/" className={pathname === '/' ? 'active' : ''}><Home size={22} /><span>Trang chủ</span></Link>
       <Link href="/products" className={pathname.startsWith('/products') ? 'active' : ''}><Menu size={22} /><span>Danh mục</span></Link>
       <Link href="/cart" className={pathname === '/cart' ? 'active' : ''}><ShoppingCart size={22} /><span>Giỏ hàng</span></Link>
-      <Link href="/account?tab=favorites" className={pathname.startsWith('/account') && isLoggedIn ? 'active' : ''}><Heart size={22} /><span>{isLoggedIn && displayName ? displayName.split(' ').pop() : 'Yêu thích'}</span></Link>
       <Link href="/account" className={pathname.startsWith('/account') ? 'active' : ''}><User size={22} /><span>Tài khoản</span></Link>
     </div>
   );

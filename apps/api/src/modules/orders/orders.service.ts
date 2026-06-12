@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@hsbx/db';
 import { isAdminRole } from '../../common/roles.decorator';
+import { RealtimeService } from '../../realtime/realtime.service';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   private isUuid(value: string) {
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
@@ -260,7 +264,7 @@ export class OrdersService {
       }
     }
 
-    await this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         type: 'ORDER_NEW',
         title: 'Đơn hàng mới',
@@ -268,6 +272,17 @@ export class OrdersService {
         data: { orderId: order.id, orderCode: order.orderCode },
       },
     });
+
+    const orderPayload = this.toOrderRealtimePayload(order);
+    this.realtime.emitOrderNew(orderPayload);
+    this.realtime.emitNotificationNew(this.realtime.createPayload({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      createdAt: notification.createdAt.toISOString(),
+    }));
 
     return order;
   }
@@ -298,7 +313,7 @@ export class OrdersService {
     // Create notification
     const statusLabel = status === 'CONFIRMED' ? 'xác nhận' : status === 'PREPARING' ? 'chuẩn bị' : status === 'DELIVERING' ? 'giao hàng' : status === 'COMPLETED' ? 'hoàn thành' : status === 'CANCELLED' ? 'hủy' : status.toLowerCase();
     const notifType = status === 'COMPLETED' ? 'ORDER_DELIVERED' : 'SYSTEM';
-    await this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         type: notifType,
         title: 'Cập nhật đơn hàng',
@@ -306,6 +321,38 @@ export class OrdersService {
         data: { orderId: id, oldStatus, newStatus: status },
       },
     });
+
+    const orderPayload = this.toOrderRealtimePayload(data);
+    this.realtime.emitOrderUpdated(orderPayload, data.userId);
+    this.realtime.emitOrderStatusChanged(orderPayload, data.userId);
+    const notificationPayload = this.realtime.createPayload({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      data: notification.data,
+      createdAt: notification.createdAt.toISOString(),
+    });
+    this.realtime.emitNotificationNew(notificationPayload);
+    if (data.userId) {
+      const userNotification = await this.prisma.notification.create({
+        data: {
+          userId: data.userId,
+          type: notifType,
+          title: 'Cập nhật đơn hàng',
+          message: `Đơn hàng ${data.orderCode || '#' + id.slice(0, 8)} đã chuyển sang trạng thái ${statusLabel}`,
+          data: { orderId: id, oldStatus, newStatus: status },
+        },
+      });
+      this.realtime.emitNotificationNew(this.realtime.createPayload({
+        id: userNotification.id,
+        type: userNotification.type,
+        title: userNotification.title,
+        message: userNotification.message,
+        data: userNotification.data,
+        createdAt: userNotification.createdAt.toISOString(),
+      }), data.userId);
+    }
 
     return data;
   }
@@ -324,5 +371,17 @@ export class OrdersService {
       orderBy: { createdAt: 'desc' },
     });
     return data;
+  }
+
+  private toOrderRealtimePayload(order: any) {
+    return {
+      id: order.id,
+      orderCode: order.orderCode,
+      status: order.orderStatus,
+      customerName: order.customerName,
+      totalAmount: order.totalAmount != null ? Number(order.totalAmount) : undefined,
+      createdAt: order.createdAt ? new Date(order.createdAt).toISOString() : undefined,
+      updatedAt: order.updatedAt ? new Date(order.updatedAt).toISOString() : undefined,
+    };
   }
 }

@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@hsbx/db';
+import { RealtimeService } from '../../realtime/realtime.service';
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeService,
+  ) {}
 
   async findAll(params: {
     productId?: string;
@@ -217,7 +221,7 @@ export class InventoryService {
     const threshold = inventory.lowStockThreshold != null ? Number(inventory.lowStockThreshold) : 5;
     if (oldQty > threshold && updatedQty <= threshold) {
       const product = await this.prisma.product.findUnique({ where: { id: productId }, select: { name: true } });
-      await this.prisma.notification.create({
+      const notification = await this.prisma.notification.create({
         data: {
           type: 'PRODUCT_LOW_STOCK',
           title: 'Sản phẩm sắp hết hàng',
@@ -225,6 +229,23 @@ export class InventoryService {
           data: { productId, inventoryId: inventory.id, quantity: updatedQty },
         },
       });
+      const productName = product?.name || 'Không xác định';
+      const payload = {
+        productId,
+        productName,
+        quantity: updatedQty,
+        threshold,
+        inventoryId: inventory.id,
+      };
+      this.realtime.emitInventoryLowStock(payload);
+      this.realtime.emitNotificationNew(this.realtime.createPayload({
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        data: notification.data,
+        createdAt: notification.createdAt.toISOString(),
+      }));
     }
 
     return {
