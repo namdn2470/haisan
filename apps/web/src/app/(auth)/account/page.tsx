@@ -17,6 +17,7 @@ import {
   register as registerUser,
 } from '@/services';
 import { useAuth } from '@/contexts/AuthContext';
+import { MobileBottomNav } from '@/components/shared/SiteShell';
 
 type Profile = {
   id: string; fullName?: string; phone?: string; email?: string; role: string;
@@ -48,6 +49,18 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'MANAGER'];
+
+const normalizeFavorites = (value: unknown): Favorite[] => {
+  if (Array.isArray(value)) return value as Favorite[];
+  if (value && typeof value === 'object') {
+    const obj = value as { data?: unknown; favorites?: unknown; items?: unknown; products?: unknown };
+    if (Array.isArray(obj.data)) return obj.data as Favorite[];
+    if (Array.isArray(obj.favorites)) return obj.favorites as Favorite[];
+    if (Array.isArray(obj.items)) return obj.items as Favorite[];
+    if (Array.isArray(obj.products)) return obj.products as Favorite[];
+  }
+  return [];
+};
 
 export default function AccountPage() {
   return (
@@ -82,6 +95,7 @@ function AccountPageContent() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const safeFavorites: Favorite[] = Array.isArray(favorites) ? favorites : [];
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(true);
@@ -105,7 +119,9 @@ function AccountPageContent() {
         setLoading(false);
       }).catch(() => setLoading(false));
       getOrders().then(data => setOrders(data as unknown as Order[])).catch(() => {});
-      api<{ data: Favorite[] }>('/api/favorites').then(r => setFavorites(r.data || [])).catch(() => {});
+      api('/api/favorites')
+        .then(r => setFavorites(normalizeFavorites(r)))
+        .catch(error => { console.error('Failed to load favorites:', error); setFavorites([]); });
       api<{ data: Address[] }>('/api/addresses').then(r => setAddresses(r.data || [])).catch(() => {});
     } else {
       setLoading(false);
@@ -155,7 +171,12 @@ function AccountPageContent() {
         body: JSON.stringify({ productId }),
       });
       if (r.data.favorited) {
-        api<{ data: Favorite[] }>('/api/favorites').then(r => setFavorites(r.data || [])).catch(() => {});
+        try {
+          const r2 = await api('/api/favorites');
+          setFavorites(normalizeFavorites(r2));
+        } catch {
+          // leave current favorites unchanged on refetch failure
+        }
       } else {
         setFavorites(prev => prev.filter(f => f.product.id !== productId));
       }
@@ -206,6 +227,7 @@ function AccountPageContent() {
   /* ========== AUTH PAGE (LOGIN / REGISTER) ========== */
   if (!profile && !loading) {
     return (
+      <>
       <div className="auth-wrap">
         {/* Left Panel — Brand */}
         <div className="auth-left">
@@ -373,6 +395,8 @@ function AccountPageContent() {
           </div>
         </div>
       </div>
+      <MobileBottomNav />
+      </>
     );
   }
 
@@ -421,7 +445,7 @@ function AccountPageContent() {
         </div>
       </header>
 
-      <main className="ac-container">
+      <main className="ac-container ac-container-with-nav">
         <div className="ac-layout">
           {/* Sidebar */}
           <aside className="ac-sidebar">
@@ -624,9 +648,9 @@ function AccountPageContent() {
                 <div className="ac-card">
                   <div className="ac-card-header">
                     <h2>Sản phẩm yêu thích</h2>
-                    <span className="ac-order-count">{favorites.length} sản phẩm</span>
+                    <span className="ac-order-count">{safeFavorites.length} sản phẩm</span>
                   </div>
-                  {favorites.length === 0 ? (
+                  {safeFavorites.length === 0 ? (
                     <div className="ac-empty">
                       <Heart size={48} strokeWidth={1} color="#c0c8d4" />
                       <h3>Chưa có sản phẩm yêu thích</h3>
@@ -635,7 +659,7 @@ function AccountPageContent() {
                     </div>
                   ) : (
                     <div className="ac-fav-grid">
-                      {favorites.map(f => (
+                      {safeFavorites.map(f => (
                         <Link key={f.id} href={`/products/${f.product.slug}`} className="ac-fav-card">
                           <div className="ac-fav-img">
                             <img src={(() => { const first = f.product.images?.[0]; return !first ? img('prod-tom.jpg') : typeof first === 'string' ? first : first.imageUrl; })()} alt={f.product.name}
@@ -730,6 +754,7 @@ function AccountPageContent() {
           </section>
         </div>
       </main>
+      <MobileBottomNav />
     </div>
   );
 }
